@@ -20,16 +20,27 @@ gstunnel 为a、b之间的网络通信提供了一个加密层。
 http proxy（squid3等）、email、socks 5 proxy等基于tcp开发的应用。
 
 使用方法:
+
 进入"gstunnel"目录下，使用"go build server.go"和"go build client.go"分别编译.go文件。
+
 这时你得到了两个可执行文件client、server。
+
 可执行文件，接受基于命令行的参数输入。
+
 格式:
+
 可执行文件名 监听地址 目标地址 aes密码
+
 注意：aes密码只能是16、24、32字节大小的字符串。
+
 举例说明：
+
 Linux bash：
+
 root@ubuntu:~# ./client 127.0.0.1:12345 127.0.0.1:43210 “1234567890123456“
+
 注意：请保证client在linux系统中为可执行文件。是否是可执行文件，请查看client文件的文件属性。
+
 Windows cmd：
 C:\> ./client 127.0.0.1:12345 127.0.0.1:43210 “1234567890123456“
 
