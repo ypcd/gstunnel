@@ -42,6 +42,7 @@ root@ubuntu:~# ./client 127.0.0.1:12345 127.0.0.1:43210 “1234567890123456“
 注意：请保证client在linux系统中为可执行文件。是否是可执行文件，请查看client文件的文件属性。
 
 Windows cmd：
+
 C:\> ./client 127.0.0.1:12345 127.0.0.1:43210 “1234567890123456“
 
 项目地址：https://github.com/ypcd/gstunnel
