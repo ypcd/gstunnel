@@ -2,21 +2,29 @@
 This is a secure network tunnel.
 
 项目简介：
+
 gstunnel 是 基于go 语言开发的一个安全网络管道，支持tcp协议。
+
 gstunnel分为client和server两部分。
+
 gstunnel 基于aes进行数据加密。
 
 流程示意：
+
 网络中，a到b的网络通信。
+
 a-->b
 
 使用gstunnel 后， a到b的网络通信。
+
 a-->gstunnel client -->gstunnel server -->b
 
 gstunnel 为a、b之间的网络通信提供了一个加密层。
+
 使得a、b的通信数据，变为了加密数据，这样第三方就不能获知a、b的通信内容。从而保证了a、b网络通信的安全。
 
 支持的应用：
+
 http proxy（squid3等）、email、socks 5 proxy等基于tcp开发的应用。
 
 使用方法:
