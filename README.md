@@ -60,3 +60,69 @@ C:\> ./server 1.2.3.4:43210 1.2.3.4:3128 “1234567890123456“
 项目地址：https://github.com/ypcd/gstunnel
 
 项目基于GPLv3协议开源。
+
+
+
+
+The following from google translation:
+
+
+Project Description:
+
+Gstunnel is based on the development of a language network gateway, support tcp protocol.
+
+Gstunnel divided into client and server two parts.
+
+Gstunnel is based on aes for data encryption.
+
+Flow diagram:
+
+Network, a to b network communication.
+
+A -> b
+
+After using gstunnel, a to b network traffic.
+
+A -> gstunnel client -> gstunnel server -> b
+
+Gstunnel provides an encryption layer for network traffic between a and b.
+
+So that a, b of communication data, into encrypted data, so that third parties can not know a, b communication content. Thus ensuring a, b network communication security.
+
+Supported applications:
+
+Http proxy (squid3, etc.), email, socks 5 proxy and other applications based on tcp development.
+
+Instructions:
+
+Go to the "gstunnel" directory and compile the .go file using "go build server.go" and "go build client.go".
+
+At this point you get two executable files client, server.
+
+Executable file, accept command-based parameter input.
+
+format:
+
+Executable File Name List Addresses Destination Address aes Password
+
+Note: The aes password can only be a string of 16, 24, 32 bytes.
+
+for example:
+
+Linux bash:
+
+Root @ ubuntu: ~ # ./client 127.0.0.1:3128 1.2.3.4:43210 "1234567890123456"
+
+Root @ ubuntu: ~ # ./server 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
+
+Note: Please ensure that the client in the linux system for the executable file. Whether it is an executable file, please see the client file file attributes.
+
+Windows cmd:
+
+C:> ./client 127.0.0.1:3128 1.2.3.4: 43210 "1234567890123456"
+
+C:> ./server 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
+
+Project address: https: //github.com/ypcd/gstunnel
+
+The project is based on the GPLv3 protocol.
