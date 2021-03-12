@@ -4,11 +4,16 @@ This is a secure network tunnel.
 【gstunnel介绍】
  
 gstunnel 是基于go 语言开发的高性能、高并发的轻量级安全网络加密管道，支持tcp协议。
- 
-项目采用多协程和无锁模式，保证了gstunnel的高性能和高并发。无锁模式的采用也最大限度的减少了数据竞争的发生，和因为数据竞争带来的安全问题。
+
+项目采用多协程和无锁模式，保证了gstunnel的高性能和高并发。
+
+多协程，可以充分使用多个cpu核心进行并行计算，发挥多核cpu的最大性能。
+
+无锁模式的采用也最大限度的减少了数据竞争的发生，和因为数据竞争带来的安全问题。
 
 golang并没有在语言层面提供完整的内存安全性保证。golang使用gc管理内存，提供了部分内存安全性，但是依然可能因为数据竞争出现内存安全问题。
  
+
 基于go语言开发，使用go默认net库。Go 语言层面采用阻塞+多协程模式，进行网络通信。
 
 网络模型： 因为go的默认net库，底层基于非阻塞+多路复用模型（windows iocp、linux epoll）， 所以gstunnel实质模型为非阻塞+多路复用模型。保证了gstunnel网络通信的高性能。
@@ -99,17 +104,19 @@ C:> ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 “1234567890123456“
 
 Use Google Translate for translation
 
-# gstunnel
-This is a secure network tunnel.
-
 [Introduction of gstunnel]
  
 gstunnel is a high-performance, high-concurrency, lightweight security network encryption pipeline developed based on the go language, and supports the tcp protocol.
- 
-The project adopts multi-coroutine and lock-free mode to ensure the high performance and high concurrency of gstunnel. The adoption of the lock-free mode also minimizes the occurrence of data competition and the security problems caused by data competition.
+
+The project adopts multi-coroutine and lock-free mode to ensure the high performance and high concurrency of gstunnel.
+
+Multi-coroutine, you can make full use of multiple CPU cores for parallel computing, and give full play to the maximum performance of multi-core CPUs.
+
+The adoption of the lock-free mode also minimizes the occurrence of data competition and the security problems caused by data competition.
 
 Golang does not provide complete memory safety guarantees at the language level. Golang uses gc to manage memory and provides some memory security, but memory security problems may still occur due to data competition.
  
+
 Based on go language development, using go default net library. The Go language layer uses the blocking + multi-coroutine mode for network communication.
 
 Network model: Because the default net library of go, the bottom layer is based on non-blocking + multiplexing model (windows iocp, linux epoll), so the essential model of gstunnel is non-blocking + multiplexing model. Ensure the high performance of gstunnel network communication.
