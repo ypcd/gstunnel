@@ -1,3 +1,0 @@
-digraph simple_demo {
-application->{file, databases};
-}
