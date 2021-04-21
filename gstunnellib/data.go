@@ -20,10 +20,10 @@ import (
 	"math"
 	"math/rand"
 	"os"
-
-	//"sync"
 	"time"
 )
+
+var Version string = "V2.4"
 
 var p func(...interface{}) (int, error)
 
@@ -32,26 +32,20 @@ var rand_s rand.Source = rand.NewSource(time.Now().Unix())
 
 var rd_s rand.Source = rand.NewSource(time.Now().Unix())
 
-var debug_tag bool = false
+var debug_tag bool
 
 var commonIV = []byte{171, 158, 1, 73, 31, 98, 64, 85, 209, 217, 131, 150, 104, 219, 33, 220}
 
-
 func init() {
-	p = fmt.Println
+	debug_tag = false
 	p = Nullprint
+
+	//debug_tag = true
+	//p = fmt.Println
 }
 
-func Nullprint(v ...interface{}) (int, error)                       { return 1, errors.New("") }
-func Nullprintf(format string, a ...interface{}) (n int, err error) { return 1, errors.New("") }
-
-type v struct {
-	V1 int
-}
-
-type ls struct {
-	Vls []v
-}
+func Nullprint(v ...interface{}) (int, error)                       { return 1, nil }
+func Nullprintf(format string, a ...interface{}) (n int, err error) { return 1, nil }
 
 type Pack struct {
 	Data []byte
@@ -74,7 +68,7 @@ const (
 	ChangeCryKey int32 = 2
 )
 
-////Data, Rand, HashHex, opertype, operData
+//Data, Rand, HashHex, opertype, operData
 type PackOper struct {
 	OperType int32
 	OperData []byte
@@ -140,15 +134,27 @@ func Int64ToBytes(data int64) []byte {
 	return bbuf.Bytes()
 }
 
+func (po *PackOper) GetSha256FromPackOper() string {
+	return GetSha256Hex(append(Int32ToBytes(po.OperType), append(po.OperData, append(po.Data, Int64ToBytes(po.Rand)...)...)...))
+
+	//return ""
+}
+
 func CreatePackOperGen(data []byte) PackOper {
 
 	rd := rand_s.Int63()
 
 	pd := PackOper{
 		OperType: GenOper,
-		//OperData:	[]byte,
-		Data: data, Rand: rd,
-		HashHex: GetSha256Hex(append(data, Int64ToBytes(rd)...)),
+		//OperData: []byte(""),
+		Data: data,
+		Rand: rd,
+		HashHex: GetSha256Hex(
+			append(
+				Int32ToBytes(GenOper),
+				append(data,
+					Int64ToBytes(rd)...)...,
+			)),
 	}
 	return pd
 }
@@ -162,7 +168,7 @@ func CreatePackOperChangeKey() PackOper {
 		OperType: ChangeCryKey,
 		OperData: []byte(key),
 		Rand:     rd,
-		HashHex:  GetSha256Hex(append(Int32ToBytes(GenOper), append([]byte(key), Int64ToBytes(rd)...)...)),
+		HashHex:  GetSha256Hex(append(Int32ToBytes(ChangeCryKey), append([]byte(key), Int64ToBytes(rd)...)...)),
 	}
 	return pd
 }
@@ -208,14 +214,22 @@ func UnPack_Oper(data []byte) PackOper {
 		p(msg)
 		p("json: ", string(data2))
 	}
+
 	return msg
 }
 
-func jsonUnPack_OperGen(data []byte) []byte {
+func jsonUnPack_OperGen(data []byte) ([]byte, error) {
 
 	p1 := UnPack_Oper(data)
+	h1 := p1.GetSha256FromPackOper()
 
-	return p1.Data[:]
+	if p1.HashHex == h1 {
+		return p1.Data[:], nil
+	} else {
+		return []byte(""), errors.New("The packoper hash is inconsistent.")
+	}
+
+	//return p1.Data[:]
 }
 
 func GetSha256Hex(data []byte) string {
@@ -223,15 +237,6 @@ func GetSha256Hex(data []byte) string {
 	return hex.EncodeToString(
 		s1[:],
 	)
-}
-
-func find0_1(v1 []byte) (int, bool) {
-	for i := 0; i < len(v1); i++ {
-		if v1[i] == 0 {
-			return i, true
-		}
-	}
-	return -1, false
 }
 
 func Find0(v1 []byte) (int, bool) {
@@ -247,7 +252,7 @@ func jsonPacking(data []byte) []byte {
 	return jsonPacking_OperGen(data)
 }
 
-func jsonUnpack(data []byte) []byte {
+func jsonUnpack(data []byte) ([]byte, error) {
 	if begin_Dinfo == 0 {
 		fmt.Println("Pack_Rand use.")
 		begin_Dinfo = 1
@@ -255,134 +260,13 @@ func jsonUnpack(data []byte) []byte {
 	return jsonUnPack_OperGen(data)
 }
 
-func jsonUnpack_1(data []byte) []byte {
-	var msg Pack
-	ix, re := Find0(data)
-	if !re {
-		return []byte{}
-	}
-	data = data[:ix]
-
-	json.Unmarshal(data, &msg)
-	return msg.Data[:]
-}
-
-func jsonPacking_1(data []byte) []byte {
-	pd := Pack{Data: data}
-	re, _ := json.Marshal(pd)
-
-	return append(re, 0)
-}
-
-func jsonUnPack_Rand(data []byte) []byte {
-	var msg PackRand
-	ix, re := Find0(data)
-	if !re {
-		return []byte{}
-	}
-	data = data[:ix]
-
-	json.Unmarshal(data, &msg)
-	return msg.Data[:]
-}
-
-func jsonPacking_Rand(data []byte) []byte {
-	pd := PackRand{Pack: Pack{Data: data}, Rand: rand_s.Int63()}
-	re, _ := json.Marshal(pd)
-
-	return append(re, 0)
-}
-
-func jsonPacking_RandHash(data []byte) []byte {
-
-	rd := rand_s.Int63()
-	buf := make([]byte, 100)
-	blen := binary.PutVarint(buf, rd)
-	buf = buf[:blen]
-
-	pd := PackRandHash{
-		PackRand{Pack: Pack{Data: data}, Rand: rd},
-		GetSha256Hex(append(data, buf...)),
-	}
-
-	re, _ := json.Marshal(pd)
-
-	if debug_tag {
-		p("pd: ", pd)
-		p("json: ", string(re))
-	}
-
-	return append(re, 0)
-}
-
-func jsonUnPack_RandHash(data []byte) []byte {
-	var msg PackRandHash
-	ix, re := Find0(data)
-	if !re {
-		return []byte{}
-	}
-	data = data[:ix]
-
-	json.Unmarshal(data, &msg)
-	if debug_tag {
-		p(msg)
-		p("json: ", string(data))
-	}
-	return msg.Data[:]
-}
-
-func encrypter(data []byte) []byte {
-	//commonIV := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
-	key := "5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ"
-
-	cpr, _ := aes.NewCipher([]byte(key))
-	cfbE := cipher.NewCFBEncrypter(cpr, commonIV)
-
-	dst := make([]byte, len(data))
-
-	cfbE.XORKeyStream(dst, data)
-	return dst
-}
-
-func decrypter(data []byte) []byte {
-	//commonIV := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f}
-	key1 := "5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ"
-
-	key := key1
-	cpr, _ := aes.NewCipher([]byte(key))
-	cfbD := cipher.NewCFBDecrypter(cpr, commonIV)
-
-	dst := make([]byte, len(data))
-
-	cfbD.XORKeyStream(dst, data)
-	return dst
-}
-
-func Packing(data []byte) []byte {
-	data = encrypter(data)
-	return jsonPacking(data)
-}
-func Unpack(data []byte) []byte {
-	data = jsonUnpack(data)
-	return decrypter(data)
-}
-
-func CreatePack() Pack {
-	return Pack{}
-}
-
 type Aes struct {
-	//locken, lockde sync.Mutex
-	//commonIV []byte
-	//key string
 	cpr        cipher.Block
 	cfbE, cfbD cipher.Stream
 }
 
 func CreateAes(key string) Aes {
 	var v1 Aes
-	//commonIV := []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0xff}
-	//commonIV := []byte{171, 158, 1, 73, 31, 98, 64, 85, 209, 217, 131, 150, 104, 219, 33, 220}
 
 	v1.cpr, _ = aes.NewCipher([]byte(key))
 	v1.cfbE = cipher.NewCFBEncrypter(v1.cpr, commonIV)
@@ -412,18 +296,19 @@ func (ap *Aespack) Packing(data []byte) []byte {
 	edata := base64.StdEncoding.EncodeToString(crydata)
 	return append([]byte(edata), 0)
 }
-func (ap *Aespack) Unpack(data []byte) []byte {
-
+func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 	d1, _ := base64.StdEncoding.DecodeString(string(data))
 	jdata := ap.a.decrypter(d1)
-	pdata := []byte{}
+	var pdata []byte
+	var err error
+
 	if IsChangeCryKey(jdata) {
-		ap.changeCryKey(GetKey(jdata))
+		err = ap.changeCryKey(GetKey(jdata))
 		pdata = []byte{}
 	} else {
-		pdata = jsonUnpack(jdata)
+		pdata, err = jsonUnpack(jdata)
 	}
-	return pdata
+	return pdata, err
 }
 
 func (ap *Aespack) changeCryKey(key []byte) error {

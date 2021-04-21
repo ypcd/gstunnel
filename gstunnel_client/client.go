@@ -9,20 +9,21 @@ package main
 import (
 	//	"bytes"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"gstunnellib"
-	"log"
+	"io/ioutil"
 	"net"
-	"net/http"
 	_ "net/http/pprof"
 	"os"
+
 	//	"runtime"
 	//	"runtime/pprof"
 	"sync/atomic"
 	"time"
 	"timerm"
 )
+
+var version string = gstunnellib.Version
 
 var p = gstunnellib.Nullprint
 var pf = gstunnellib.Nullprintf
@@ -35,14 +36,16 @@ var gsconfig gsConfig
 
 var goPackTotal, goUnpackTotal int32 = 0, 0
 
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
-var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+//var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+//var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 func main() {
 
-	go func() {
-		log.Println("http server: ", http.ListenAndServe("localhost:6060", nil))
-	}()
+	/*
+		go func() {
+			log.Println("http server: ", http.ListenAndServe("localhost:6060", nil))
+		}()
+	*/
 	/*
 		flag.Parse()
 		//fmt.Println
@@ -94,31 +97,19 @@ type gsConfig struct {
 	Key    string
 }
 
-func test1() {
-	f, _ := os.Open("config.json")
-	buf := make([]byte, 10000)
-	n, _ := f.Read(buf)
-	buf = buf[:n]
-	fmt.Println(string(buf))
-
-	gsc1 := gsConfig{}
-	json.Unmarshal(buf, &gsc1)
-}
-
 func CreateGsconfig() {
-	f, err := os.Open("config.json")
+	f, err := os.Open("config.client.json")
 	checkError(err)
 
 	defer func() {
 		f.Close()
 	}()
 
-	buf := make([]byte, 10000)
-	n, _ := f.Read(buf)
-	buf = buf[:n]
+	buf, err := ioutil.ReadAll(f)
+	checkError(err)
+
 	//fmt.Println(string(buf))
 
-	//gsc1 := gsConfig{}
 	json.Unmarshal(buf, &gsconfig)
 }
 
@@ -143,8 +134,9 @@ func run() {
 		connaddr = gsconfig.Server
 		key = gsconfig.Key
 	}
-	fmt.Println(lstnaddr)
-	fmt.Println(connaddr)
+	fmt.Println("VER:", version)
+	fmt.Println("Listen_Addr:", lstnaddr)
+	fmt.Println("Conn_Addr:", connaddr)
 	fmt.Println("Begin......")
 
 	service := lstnaddr
@@ -175,22 +167,12 @@ func run() {
 	}
 }
 
-func find0_1(v1 []byte) (int, bool) {
-	for i := 0; i < len(v1); i++ {
-		if v1[i] == 0 {
-			return i, true
-		}
-	}
-	return -1, false
-}
-
 func find0(v1 []byte) (int, bool) {
 	return gstunnellib.Find0(v1)
 }
 
 func srcTOdstP_count(src net.Conn, dst net.Conn) {
 	atomic.AddInt32(&goPackTotal, 1)
-
 	srcTOdstP(src, dst)
 	atomic.AddInt32(&goPackTotal, -1)
 
@@ -225,6 +207,8 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 	fp1, fp2 = fpnull, fpnull
 
 	outf, err := os.Create(fp1)
+	checkError(err)
+
 	outf2, err := os.Create(fp2)
 	checkError(err)
 	defer src.Close()
@@ -363,8 +347,9 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 	fp1 = fpnull
 	fp2 = fpnull
 	outf, err := os.Create(fp1)
-	outf2, err := os.Create(fp2)
+	checkError(err)
 
+	outf2, err := os.Create(fp2)
 	checkError(err)
 	defer src.Close()
 	defer dst.Close()
@@ -406,7 +391,11 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 				buf = wbuf[:ix+1]
 				wbuf = wbuf[ix+1:]
 				pf("buf b:%d\n", len(buf))
-				buf = apack.Unpack(buf)
+				buf, err = apack.Unpack(buf)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error: %s", err.Error())
+					return
+				}
 				pf("buf a:%d\n", len(buf))
 				outf2.Write(buf)
 				for {

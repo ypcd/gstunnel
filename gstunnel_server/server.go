@@ -7,13 +7,17 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"gstunnellib"
+	"io/ioutil"
 	"net"
 	"os"
 	"time"
 	"timerm"
 )
+
+var version string = gstunnellib.Version
 
 var p = gstunnellib.Nullprint
 var pf = gstunnellib.Nullprintf
@@ -21,6 +25,30 @@ var pf = gstunnellib.Nullprintf
 var fpnull = os.DevNull
 
 var key string
+
+var gsconfig gsConfig
+
+type gsConfig struct {
+	Listen string
+	Server string
+	Key    string
+}
+
+func CreateGsconfig() {
+	f, err := os.Open("config.server.json")
+	checkError(err)
+
+	defer func() {
+		f.Close()
+	}()
+
+	buf, err := ioutil.ReadAll(f)
+	checkError(err)
+
+	//fmt.Println(string(buf))
+
+	json.Unmarshal(buf, &gsconfig)
+}
 
 func main() {
 	for {
@@ -34,11 +62,23 @@ func run() {
 			fmt.Println("App restart.")
 		}
 	}()
-	lstnaddr := os.Args[1]
-	connaddr := os.Args[2]
-	key = os.Args[3]
-	fmt.Println(lstnaddr)
-	fmt.Println(connaddr)
+
+	var lstnaddr, connaddr string
+
+	if len(os.Args) == 4 {
+		lstnaddr = os.Args[1]
+		connaddr = os.Args[2]
+		key = os.Args[3]
+	} else {
+		CreateGsconfig()
+		lstnaddr = gsconfig.Listen
+		connaddr = gsconfig.Server
+		key = gsconfig.Key
+	}
+
+	fmt.Println("VER:", version)
+	fmt.Println("Listen_Addr:", lstnaddr)
+	fmt.Println("Conn_Addr:", connaddr)
 	fmt.Println("Begin......")
 
 	service := lstnaddr
@@ -71,87 +111,6 @@ func find0(v1 []byte) (int, bool) {
 	return gstunnellib.Find0(v1)
 }
 
-func srcTOdstP_1(src net.Conn, dst net.Conn) {
-	/*
-	   defer func() {
-	       if x := recover(); x != nil {
-	           fmt.Println("Go exit.")
-	       }
-	   }()
-	*/
-	tmr := timerm.CreateTimer(time.Second * 60)
-	tmrP := timerm.CreateTimer(time.Second * 1)
-	tmrP2 := timerm.CreateTimer(time.Second * 1)
-
-	apack := gstunnellib.CreateAesPack(key)
-
-	fp1 := "SPrecv.data"
-	fp2 := "SUsend.data"
-	fp1 = fpnull
-	fp2 = fpnull
-	outf, err := os.Create(fp1)
-	outf2, err := os.Create(fp2)
-	checkError(err)
-	defer src.Close()
-	defer dst.Close()
-	defer outf.Close()
-	buf := make([]byte, 1024*64)
-	var rbuf, wbuf []byte
-	wlent, rlent := 0, 0
-
-	for {
-		rlen, err := src.Read(buf)
-		rlent = rlent + rlen
-		if tmrP.Run() {
-			fmt.Fprintf(os.Stderr, "%d read end...", rlen)
-		}
-		if tmr.Run() {
-			return
-		}
-		if rlen == 0 {
-			return
-		}
-		if err != nil {
-			continue
-		}
-
-		outf.Write(buf[:rlen])
-		tmr.Boot()
-		rbuf = buf
-		buf = buf[:rlen]
-		wbuf = append(wbuf, buf...)
-		fre := bool(len(wbuf) > 0)
-		if fre {
-			buf = apack.Packing(wbuf)
-			wbuf = wbuf[len(wbuf):]
-			outf2.Write(buf)
-			for {
-				if len(buf) > 0 {
-					wlen, err := dst.Write(buf)
-					wlent = wlent + wlen
-					if wlen == 0 {
-						return
-					}
-					if err != nil && wlen <= 0 {
-						continue
-					}
-					if len(buf) == wlen {
-						break
-					}
-					buf = buf[wlen:]
-				} else {
-					break
-				}
-			}
-
-		}
-		buf = rbuf
-		if tmrP2.Run() {
-			fmt.Printf("trlen:%d  twlen:%d\n", rlent, wlent)
-		}
-	}
-}
-
 func srcTOdstP(src net.Conn, dst net.Conn) {
 	defer func() {
 		if x := recover(); x != nil {
@@ -175,6 +134,7 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 	fp1, fp2 = fpnull, fpnull
 
 	outf, err := os.Create(fp1)
+	checkError(err)
 	outf2, err := os.Create(fp2)
 	checkError(err)
 	defer src.Close()
@@ -311,9 +271,10 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 	fp1 = fpnull
 	fp2 = fpnull
 	outf, err := os.Create(fp1)
-	outf2, err := os.Create(fp2)
-
 	checkError(err)
+	outf2, err := os.Create(fp2)
+	checkError(err)
+
 	defer src.Close()
 	defer dst.Close()
 	defer outf.Close()
@@ -351,7 +312,11 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 				buf = wbuf[:ix+1]
 				wbuf = wbuf[ix+1:]
 				pf("buf b:%d\n", len(buf))
-				buf = apack.Unpack(buf)
+				buf, err = apack.Unpack(buf)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error: %s", err.Error())
+					return
+				}
 				pf("buf a:%d\n", len(buf))
 				outf2.Write(buf)
 				for {
