@@ -8,10 +8,10 @@ package main
 
 import (
 	//	"bytes"
-	"encoding/json"
+
 	"fmt"
 	"gstunnellib"
-	"io/ioutil"
+	"log"
 	"net"
 	_ "net/http/pprof"
 	"os"
@@ -23,7 +23,7 @@ import (
 	"timerm"
 )
 
-var version string = gstunnellib.Version
+const version string = gstunnellib.Version
 
 var p = gstunnellib.Nullprint
 var pf = gstunnellib.Nullprintf
@@ -32,12 +32,21 @@ var fpnull = os.DevNull
 
 var key string
 
-var gsconfig gsConfig
+var gsconfig *gstunnellib.GsConfig
 
 var goPackTotal, goUnpackTotal int32 = 0, 0
 
+var Logger *log.Logger
+
 //var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 //var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
+func init() {
+	Logger = gstunnellib.CreateFileLogger("gstunnel_client.err.log")
+
+	gsconfig = gstunnellib.CreateGsconfig("config.client.json")
+
+}
 
 func main() {
 
@@ -91,32 +100,11 @@ func main() {
 	//return
 }
 
-type gsConfig struct {
-	Listen string
-	Server string
-	Key    string
-}
-
-func CreateGsconfig() {
-	f, err := os.Open("config.client.json")
-	checkError(err)
-
-	defer func() {
-		f.Close()
-	}()
-
-	buf, err := ioutil.ReadAll(f)
-	checkError(err)
-
-	//fmt.Println(string(buf))
-
-	json.Unmarshal(buf, &gsconfig)
-}
-
 func run() {
 	defer func() {
 		if x := recover(); x != nil {
 			fmt.Println("Error:", x)
+			Logger.Println(x, "  App restart.")
 			fmt.Println("App restart.")
 
 		}
@@ -129,7 +117,6 @@ func run() {
 		connaddr = os.Args[2]
 		key = os.Args[3]
 	} else {
-		CreateGsconfig()
 		lstnaddr = gsconfig.Listen
 		connaddr = gsconfig.Server
 		key = gsconfig.Key
@@ -190,6 +177,8 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 			fmt.Println("Go exit.")
 			err := fmt.Errorf("Error:%s", x)
 			fmt.Println(err)
+			Logger.Println(x, "  Go exit.")
+
 		}
 	}()
 
@@ -251,7 +240,7 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 		rlen, err := src.Read(buf)
 		rlent = rlent + rlen
 		if tmrP.Run() {
-			fmt.Fprintf(os.Stderr, "%d read end...", rlen)
+			fmt.Fprintf(os.Stderr, "%d read end...\n", rlen)
 		}
 
 		if tmr.Run() {
@@ -331,6 +320,7 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 	defer func() {
 		if x := recover(); x != nil {
 			fmt.Println("Go exit.")
+			Logger.Println(x, "  Go exit.")
 		}
 	}()
 
@@ -364,7 +354,7 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 		rlen, err := src.Read(buf)
 		rlent = rlent + rlen
 		if tmrP.Run() {
-			fmt.Fprintf(os.Stderr, "%d read end...", rlen)
+			fmt.Fprintf(os.Stderr, "%d read end...\n", rlen)
 			x1 := 1
 			x1++
 		}
@@ -394,6 +384,7 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 				buf, err = apack.Unpack(buf)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error: %s", err.Error())
+					Logger.Println(err.Error())
 					return
 				}
 				pf("buf a:%d\n", len(buf))
@@ -431,8 +422,5 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 }
 
 func checkError(err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-		os.Exit(-11)
-	}
+	gstunnellib.CheckError(err)
 }

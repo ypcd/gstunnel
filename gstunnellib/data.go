@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	randc "crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
@@ -17,24 +18,27 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"math"
-	"math/rand"
+	"math/big"
 	"os"
-	"time"
 )
 
-var Version string = "V2.4"
+const Version string = "V2.7"
 
 var p func(...interface{}) (int, error)
 
 var begin_Dinfo int = 0
-var rand_s rand.Source = rand.NewSource(time.Now().Unix())
-
-var rd_s rand.Source = rand.NewSource(time.Now().Unix())
 
 var debug_tag bool
 
 var commonIV = []byte{171, 158, 1, 73, 31, 98, 64, 85, 209, 217, 131, 150, 104, 219, 33, 220}
+
+var Logger *log.Logger
+
+func Nullprint(v ...interface{}) (int, error)                       { return 1, nil }
+func Nullprintf(format string, a ...interface{}) (n int, err error) { return 1, nil }
 
 func init() {
 	debug_tag = false
@@ -43,9 +47,43 @@ func init() {
 	//debug_tag = true
 	//p = fmt.Println
 }
+func CheckError(err error) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
+		Logger.Println(err.Error())
+		os.Exit(-11)
+	}
+}
 
-func Nullprint(v ...interface{}) (int, error)                       { return 1, nil }
-func Nullprintf(format string, a ...interface{}) (n int, err error) { return 1, nil }
+func CreateFileLogger(FileName string) *log.Logger {
+	lf, err := os.Create(FileName)
+	CheckError(err)
+	Logger = log.New(lf, "Error: ", log.Lshortfile|log.LstdFlags|log.Lmsgprefix)
+	return Logger
+}
+
+type GsConfig struct {
+	Listen string
+	Server string
+	Key    string
+}
+
+func CreateGsconfig(confn string) *GsConfig {
+	f, err := os.Open(confn)
+	CheckError(err)
+
+	defer func() {
+		f.Close()
+	}()
+
+	buf, err := ioutil.ReadAll(f)
+	CheckError(err)
+
+	//fmt.Println(string(buf))
+	var gsconfig GsConfig
+	json.Unmarshal(buf, &gsconfig)
+	return &gsconfig
+}
 
 type Pack struct {
 	Data []byte
@@ -64,12 +102,14 @@ type PackRandHash struct {
 }
 
 const (
+	POBegin      int32 = 0
 	GenOper      int32 = 1
 	ChangeCryKey int32 = 2
+	POEnd        int32 = 3
 )
 
 //Data, Rand, HashHex, opertype, operData
-type PackOper struct {
+type packOper struct {
 	OperType int32
 	OperData []byte
 	Data     []byte
@@ -77,9 +117,36 @@ type PackOper struct {
 	HashHex  string
 }
 
-func GetRDF64() float64 {
+func GetRDCInt64() int64 {
+	rd, _ := randc.Int(randc.Reader,
+		big.NewInt(9223372036854775807))
+	return rd.Int64()
+}
 
-	return float64(rd_s.Int63()+1) / math.Pow(2, 64)
+func GetRDCInt8() int8 {
+	rd, _ := randc.Int(randc.Reader,
+		big.NewInt(255))
+	return int8(rd.Int64())
+}
+
+func GetRDCbyte() byte {
+	rd, _ := randc.Int(randc.Reader,
+		big.NewInt(255))
+	return byte(rd.Int64())
+}
+
+func GetRDCBytes(byteLen int) []byte {
+	data := make([]byte, byteLen)
+	for i := 0; i < byteLen; i++ {
+		data[i] = GetRDCbyte()
+	}
+	return data
+}
+
+func GetRDF64() float64 {
+	//var rd_s rand.Source = rand.NewSource(time.Now().Unix())
+	//rnd := rand.New(rd_s)
+	return float64(GetRDCInt64()) / 9223372036854775807.0
 }
 
 func GetRDInt8() int8 {
@@ -99,11 +166,7 @@ func GetRDInt64() int64 {
 }
 
 func GetRDBytes(byteLen int) []byte {
-	data := make([]byte, byteLen)
-	for i := 0; i < byteLen; i++ {
-		data[i] = byte(GetRDInt8())
-	}
-	return data
+	return GetRDCBytes(byteLen)
 }
 
 func IsChangeCryKey(Data []byte) bool {
@@ -134,17 +197,17 @@ func Int64ToBytes(data int64) []byte {
 	return bbuf.Bytes()
 }
 
-func (po *PackOper) GetSha256FromPackOper() string {
+func (po *packOper) GetSha256FromPackOper() string {
 	return GetSha256Hex(append(Int32ToBytes(po.OperType), append(po.OperData, append(po.Data, Int64ToBytes(po.Rand)...)...)...))
 
 	//return ""
 }
 
-func CreatePackOperGen(data []byte) PackOper {
+func CreatePackOperGen(data []byte) packOper {
 
-	rd := rand_s.Int63()
+	rd := GetRDCInt64()
 
-	pd := PackOper{
+	pd := packOper{
 		OperType: GenOper,
 		//OperData: []byte(""),
 		Data: data,
@@ -159,12 +222,14 @@ func CreatePackOperGen(data []byte) PackOper {
 	return pd
 }
 
-func CreatePackOperChangeKey() PackOper {
+func CreatePackOperChangeKey() packOper {
 
-	rd := rand_s.Int63()
+	//rd := rand_s.Int63()
+	rd := GetRDCInt64()
+
 	key := GetRDBytes(32)
 
-	pd := PackOper{
+	pd := packOper{
 		OperType: ChangeCryKey,
 		OperData: []byte(key),
 		Rand:     rd,
@@ -201,11 +266,11 @@ func jsonPacking_OperGen(data []byte) []byte {
 	return append(re, 0)
 }
 
-func UnPack_Oper(data []byte) PackOper {
-	var msg PackOper
+func UnPack_Oper(data []byte) packOper {
+	var msg packOper
 	ix, re := Find0(data)
 	if !re {
-		return PackOper{}
+		return packOper{}
 	}
 	data2 := data[:ix]
 
@@ -221,12 +286,17 @@ func UnPack_Oper(data []byte) PackOper {
 func jsonUnPack_OperGen(data []byte) ([]byte, error) {
 
 	p1 := UnPack_Oper(data)
+
+	if p1.OperType < POBegin || p1.OperType > POEnd {
+		return nil, errors.New("PackOper OperType is error.")
+	}
+
 	h1 := p1.GetSha256FromPackOper()
 
 	if p1.HashHex == h1 {
 		return p1.Data[:], nil
 	} else {
-		return []byte(""), errors.New("The packoper hash is inconsistent.")
+		return nil, errors.New("The packoper hash is inconsistent.")
 	}
 
 	//return p1.Data[:]
@@ -303,7 +373,7 @@ func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 	var err error
 
 	if IsChangeCryKey(jdata) {
-		err = ap.changeCryKey(GetKey(jdata))
+		err = ap.setKey(GetKey(jdata))
 		pdata = []byte{}
 	} else {
 		pdata, err = jsonUnpack(jdata)
@@ -311,7 +381,7 @@ func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 	return pdata, err
 }
 
-func (ap *Aespack) changeCryKey(key []byte) error {
+func (ap *Aespack) setKey(key []byte) error {
 	ap.a = CreateAes(string(key))
 	return nil
 }
@@ -322,7 +392,7 @@ func (ap *Aespack) ChangeCryKey() []byte {
 	crydata := ap.a.encrypter(jdata)
 	edata := base64.StdEncoding.EncodeToString(crydata)
 
-	ap.changeCryKey(GetKey(jdata))
+	ap.setKey(GetKey(jdata))
 
 	return append([]byte(edata), 0)
 }
@@ -330,8 +400,12 @@ func (ap *Aespack) ChangeCryKey() []byte {
 func CreateAesPack(key string) Aespack {
 	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
 		fmt.Println("Error: The key is not 16, 24, or 32 bytes.")
+		Logger.Println("Error: The key is not 16, 24, or 32 bytes.")
 		//panic(errors.New("Error: The key is not 16, 24, or 32 bytes."))
 		os.Exit(10)
 	}
-	return Aespack{a: CreateAes(key)}
+	ap1 := Aespack{}
+	ap1.a = CreateAes(key)
+
+	return ap1
 }

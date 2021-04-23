@@ -27,7 +27,7 @@ var wlist sync.WaitGroup
 
 func init() {
 	p = Nullprint
-	p = fmt.Println
+	//p = fmt.Println
 	debug_tag = true
 }
 
@@ -111,7 +111,7 @@ func Test_find0(t *testing.T) {
 	buf := make([]byte, 100)
 
 	for i := 0; i < 1000; i++ {
-		blen := binary.PutVarint(buf, rand_s.Int63())
+		blen := binary.PutVarint(buf, GetRDInt64())
 		data = append(data, buf[:blen]...)
 	}
 	data[rand.Intn(len(data))] = 0
@@ -325,7 +325,7 @@ func Test_GetSha256Hex(t *testing.T) {
 
 	for i := range [100]int{} {
 		_ = i
-		blen := binary.PutVarint(buf, rand_s.Int63())
+		blen := binary.PutVarint(buf, GetRDInt64())
 		data = append(data, buf[:blen]...)
 	}
 
@@ -411,7 +411,7 @@ func Test_Aespack_changeCryKey(t *testing.T) {
 	ap1 := CreateAesPack(string(key))
 	cp1 := ap1.a
 	key2 := GetRDBytes(32)
-	ap1.changeCryKey(key2)
+	ap1.setKey(key2)
 	cp2 := ap1.a
 
 	p(key)
@@ -484,4 +484,20 @@ func Test_wbuf(t *testing.T) {
 	p(wbuf)
 	wbuf = wbuf[len(wbuf):]
 	p(wbuf)
+}
+
+func Test_GetRDCBytes(t *testing.T) {
+	bs := GetRDBytes(1000000)
+	//fmt.Println(bs)
+	sum := uint64(0)
+	for i := range bs {
+		sum += uint64(bs[i])
+	}
+
+	t.Log(sum, sum/uint64(len(bs)))
+	if 123 < sum/uint64(len(bs)) && sum/uint64(len(bs)) < 130 {
+		t.Log("ok.")
+	} else {
+		t.Error()
+	}
 }
