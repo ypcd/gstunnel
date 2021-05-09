@@ -471,12 +471,19 @@ func Test_AesEncryDecry(t *testing.T) {
 	ap2 := CreateAesPack(string(key2))
 
 	ed1 := ap1.a.encrypter(d1)
+	ed2 := ap2.a.encrypter(d1)
 
-	dd1, dd2 := ap1.a.decrypter(ed1), ap2.a.decrypter(ed1)
+	dd1, dd2 := ap1.a.decrypter(ed1), ap2.a.decrypter(ed2)
 
 	p(dd1)
 	p("------------------------------------------------------------------------------------------------------------------------------")
 	p(dd2)
+
+	if bytes.Equal(dd1, d1) && bytes.Equal(d1, dd2) {
+		t.Log("ok.")
+	} else {
+		t.Error("Error.")
+	}
 }
 
 func Test_wbuf(t *testing.T) {
@@ -500,4 +507,23 @@ func Test_GetRDCBytes(t *testing.T) {
 	} else {
 		t.Error()
 	}
+}
+
+func Test_poversion(t *testing.T) {
+	//d1 := GetRDBytes(15834)
+	key1 := GetRDBytes(32)
+	//key2 := GetRDBytes(32)
+
+	ap1 := CreateAesPack(string(key1))
+	//ap2 := CreateAesPack(string(key2))
+
+	pb1 := ap1.IsTheVersionConsistent()
+	unb1, err := ap1.Unpack(pb1)
+	if err == nil {
+		t.Log("ok.")
+	} else {
+		t.Error("Error.")
+	}
+	_, _ = unb1, err
+
 }

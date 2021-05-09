@@ -13,6 +13,7 @@ import (
 	"gstunnellib"
 	"log"
 	"net"
+	"net/http"
 	_ "net/http/pprof"
 	"os"
 
@@ -38,13 +39,41 @@ var goPackTotal, goUnpackTotal int32 = 0, 0
 
 var Logger *log.Logger
 
+const networkTimeout time.Duration = time.Minute * 1
+
+var debug_client bool = false
+
 //var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 //var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 func init() {
 	Logger = gstunnellib.CreateFileLogger("gstunnel_client.err.log")
 
+	fmt.Println("VER:", version)
+	Logger.Println("VER:", version)
+
 	gsconfig = gstunnellib.CreateGsconfig("config.client.json")
+	debug_client = gsconfig.Debug
+
+	fmt.Println("debug:", debug_client)
+	Logger.Println("debug:", debug_client)
+
+	if debug_client {
+		/*
+			go func() {
+
+				mux := http.NewServeMux()
+				mux.HandleFunc("/custom_debug_path/profile", pprof.Profile)
+				log.Fatal(http.ListenAndServe("127.0.0.1:7777", mux))
+
+			}()
+		*/
+		go func() {
+			Logger.Fatalln("http server: ", http.ListenAndServe("localhost:6060", nil))
+		}()
+		fmt.Println("Debug server listen: localhost:6060")
+		Logger.Println("Debug server listen: localhost:6060")
+	}
 
 }
 
@@ -121,7 +150,7 @@ func run() {
 		connaddr = gsconfig.Server
 		key = gsconfig.Key
 	}
-	fmt.Println("VER:", version)
+
 	fmt.Println("Listen_Addr:", lstnaddr)
 	fmt.Println("Conn_Addr:", connaddr)
 	fmt.Println("Begin......")
@@ -182,7 +211,7 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 		}
 	}()
 
-	tmr := timerm.CreateTimer(time.Second * 60)
+	tmr := timerm.CreateTimer(networkTimeout)
 	tmrP := timerm.CreateTimer(time.Second * 1)
 	tmrP2 := timerm.CreateTimer(time.Second * 1)
 
@@ -209,6 +238,31 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 	wlent, rlent := 0, 0
 
 	ChangeCryKey_Total := 0
+
+	if true {
+		buf := apack.IsTheVersionConsistent()
+		//tmr.Boot()
+		//ChangeCryKey_Total += 1
+		outf2.Write(buf)
+		for {
+			if len(buf) > 0 {
+				wlen, err := dst.Write(buf)
+				wlent = wlent + wlen
+				if wlen == 0 {
+					return
+				}
+				if err != nil && wlen <= 0 {
+					continue
+				}
+				if len(buf) == wlen {
+					break
+				}
+				buf = buf[wlen:]
+			} else {
+				break
+			}
+		}
+	}
 
 	if true {
 		buf := apack.ChangeCryKey()
@@ -309,7 +363,7 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 		buf = rbuf
 		if tmrP2.Run() {
 			fmt.Printf("pack  trlen:%d  twlen:%d\n", rlent, wlent)
-			fmt.Println("goPackTotal:", goPackTotal)
+			fmt.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
 			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
 		}
 
@@ -324,7 +378,7 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 		}
 	}()
 
-	tmr := timerm.CreateTimer(time.Second * 60)
+	tmr := timerm.CreateTimer(networkTimeout)
 	tmrP := timerm.CreateTimer(time.Second * 1)
 	tmrP2 := timerm.CreateTimer(time.Second * 1)
 
@@ -416,7 +470,7 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 		buf = rbuf
 		if tmrP2.Run() {
 			fmt.Printf("unpack  trlen:%d  twlen:%d\n", rlent, wlent)
-			fmt.Println("goUnpackTotal:", goUnpackTotal)
+			fmt.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 		}
 	}
 }

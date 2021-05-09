@@ -25,7 +25,7 @@ import (
 	"os"
 )
 
-const Version string = "V2.7"
+const Version string = "V2.9"
 
 var p func(...interface{}) (int, error)
 
@@ -50,8 +50,8 @@ func init() {
 func CheckError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-		Logger.Println(err.Error())
-		os.Exit(-11)
+		Logger.Fatalln(err.Error())
+		//os.Exit(-11)
 	}
 }
 
@@ -66,6 +66,7 @@ type GsConfig struct {
 	Listen string
 	Server string
 	Key    string
+	Debug  bool
 }
 
 func CreateGsconfig(confn string) *GsConfig {
@@ -105,7 +106,8 @@ const (
 	POBegin      int32 = 0
 	GenOper      int32 = 1
 	ChangeCryKey int32 = 2
-	POEnd        int32 = 3
+	POVersion    int32 = 3
+	POEnd        int32 = 4
 )
 
 //Data, Rand, HashHex, opertype, operData
@@ -173,6 +175,10 @@ func IsChangeCryKey(Data []byte) bool {
 	return (UnPack_Oper(Data).OperType == ChangeCryKey)
 }
 
+func IsPOVersion(Data []byte) bool {
+	return (UnPack_Oper(Data).OperType == POVersion)
+}
+
 func GetKey(Data []byte) []byte {
 	return (UnPack_Oper(Data).OperData)
 }
@@ -197,32 +203,29 @@ func Int64ToBytes(data int64) []byte {
 	return bbuf.Bytes()
 }
 
-func (po *packOper) GetSha256FromPackOper() string {
+func (po *packOper) GetSha256() string {
 	return GetSha256Hex(append(Int32ToBytes(po.OperType), append(po.OperData, append(po.Data, Int64ToBytes(po.Rand)...)...)...))
 
 	//return ""
 }
 
-func CreatePackOperGen(data []byte) packOper {
+func CreatePackOperGen(data []byte) *packOper {
 
 	rd := GetRDCInt64()
 
 	pd := packOper{
 		OperType: GenOper,
 		//OperData: []byte(""),
-		Data: data,
-		Rand: rd,
-		HashHex: GetSha256Hex(
-			append(
-				Int32ToBytes(GenOper),
-				append(data,
-					Int64ToBytes(rd)...)...,
-			)),
+		Data:    data,
+		Rand:    rd,
+		HashHex: "",
 	}
-	return pd
+
+	pd.HashHex = pd.GetSha256()
+	return &pd
 }
 
-func CreatePackOperChangeKey() packOper {
+func CreatePackOperChangeKey() *packOper {
 
 	//rd := rand_s.Int63()
 	rd := GetRDCInt64()
@@ -233,9 +236,41 @@ func CreatePackOperChangeKey() packOper {
 		OperType: ChangeCryKey,
 		OperData: []byte(key),
 		Rand:     rd,
-		HashHex:  GetSha256Hex(append(Int32ToBytes(ChangeCryKey), append([]byte(key), Int64ToBytes(rd)...)...)),
+		HashHex:  "",
 	}
-	return pd
+
+	pd.HashHex = pd.GetSha256()
+	return &pd
+}
+
+func CreatePackOperVersion() *packOper {
+
+	rd := GetRDCInt64()
+
+	pd := packOper{
+		OperType: POVersion,
+		OperData: []byte(Version),
+		Rand:     rd,
+		HashHex:  "",
+	}
+
+	pd.HashHex = pd.GetSha256()
+
+	return &pd
+}
+
+func jsonPacking_OperVersion() []byte {
+
+	pd := CreatePackOperVersion()
+
+	re, _ := json.Marshal(pd)
+
+	if debug_tag {
+		p("pd: ", pd)
+		p("json: ", string(re))
+	}
+
+	return append(re, 0)
 }
 
 func jsonPacking_OperChangeKey() []byte {
@@ -283,23 +318,26 @@ func UnPack_Oper(data []byte) packOper {
 	return msg
 }
 
+func (this *packOper) IsOk() error {
+	p1 := this
+	if p1.OperType < POBegin || p1.OperType > POEnd {
+		return errors.New("PackOper OperType is error.")
+	}
+
+	h1 := p1.GetSha256()
+
+	if p1.HashHex == h1 {
+		return nil
+	} else {
+		return errors.New("The packoper hash is inconsistent.")
+	}
+}
+
 func jsonUnPack_OperGen(data []byte) ([]byte, error) {
 
 	p1 := UnPack_Oper(data)
 
-	if p1.OperType < POBegin || p1.OperType > POEnd {
-		return nil, errors.New("PackOper OperType is error.")
-	}
-
-	h1 := p1.GetSha256FromPackOper()
-
-	if p1.HashHex == h1 {
-		return p1.Data[:], nil
-	} else {
-		return nil, errors.New("The packoper hash is inconsistent.")
-	}
-
-	//return p1.Data[:]
+	return p1.Data[:], p1.IsOk()
 }
 
 func GetSha256Hex(data []byte) string {
@@ -375,9 +413,29 @@ func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 	if IsChangeCryKey(jdata) {
 		err = ap.setKey(GetKey(jdata))
 		pdata = []byte{}
-	} else {
-		pdata, err = jsonUnpack(jdata)
+		return pdata, err
 	}
+
+	if IsPOVersion(jdata) {
+		po1 := UnPack_Oper(jdata)
+		err := po1.IsOk()
+		if err != nil {
+			return []byte{}, err
+		}
+		if po1.OperType == POVersion {
+			if string(po1.OperData) == Version {
+				pdata = []byte{}
+				err = nil
+			} else {
+				pdata = []byte{}
+				err = errors.New("Version is error.")
+			}
+		}
+		return pdata, err
+	}
+
+	pdata, err = jsonUnpack(jdata)
+
 	return pdata, err
 }
 
@@ -397,12 +455,21 @@ func (ap *Aespack) ChangeCryKey() []byte {
 	return append([]byte(edata), 0)
 }
 
+func (ap *Aespack) IsTheVersionConsistent() []byte {
+
+	jdata := jsonPacking_OperVersion()
+	crydata := ap.a.encrypter(jdata)
+	edata := base64.StdEncoding.EncodeToString(crydata)
+
+	return append([]byte(edata), 0)
+}
+
 func CreateAesPack(key string) Aespack {
 	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
 		fmt.Println("Error: The key is not 16, 24, or 32 bytes.")
-		Logger.Println("Error: The key is not 16, 24, or 32 bytes.")
+		Logger.Fatalln("Error: The key is not 16, 24, or 32 bytes.")
 		//panic(errors.New("Error: The key is not 16, 24, or 32 bytes."))
-		os.Exit(10)
+		//os.Exit(10)
 	}
 	ap1 := Aespack{}
 	ap1.a = CreateAes(key)

@@ -11,6 +11,8 @@ import (
 	"gstunnellib"
 	"log"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"time"
 	"timerm"
@@ -29,13 +31,40 @@ var gsconfig *gstunnellib.GsConfig
 
 var Logger *log.Logger
 
+var debug_client bool = false
+
 //var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 //var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
 func init() {
 	Logger = gstunnellib.CreateFileLogger("gstunnel_server.err.log")
 
+	fmt.Println("VER:", version)
+	Logger.Println("VER:", version)
+
 	gsconfig = gstunnellib.CreateGsconfig("config.server.json")
+
+	debug_client = gsconfig.Debug
+
+	fmt.Println("debug:", debug_client)
+	Logger.Println("debug:", debug_client)
+
+	if debug_client {
+		/*
+			go func() {
+
+				mux := http.NewServeMux()
+				mux.HandleFunc("/custom_debug_path/profile", pprof.Profile)
+				log.Fatal(http.ListenAndServe("127.0.0.1:7777", mux))
+
+			}()
+		*/
+		go func() {
+			Logger.Fatalln("http server: ", http.ListenAndServe("localhost:6070", nil))
+		}()
+		fmt.Println("Debug server listen: localhost:6070")
+		Logger.Println("Debug server listen: localhost:6070")
+	}
 
 }
 
@@ -65,7 +94,6 @@ func run() {
 		key = gsconfig.Key
 	}
 
-	fmt.Println("VER:", version)
 	fmt.Println("Listen_Addr:", lstnaddr)
 	fmt.Println("Conn_Addr:", connaddr)
 	fmt.Println("Begin......")
@@ -136,6 +164,31 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 	wlent, rlent := 0, 0
 
 	ChangeCryKey_Total := 0
+
+	if true {
+		buf := apack.IsTheVersionConsistent()
+		//tmr.Boot()
+		//ChangeCryKey_Total += 1
+		outf2.Write(buf)
+		for {
+			if len(buf) > 0 {
+				wlen, err := dst.Write(buf)
+				wlent = wlent + wlen
+				if wlen == 0 {
+					return
+				}
+				if err != nil && wlen <= 0 {
+					continue
+				}
+				if len(buf) == wlen {
+					break
+				}
+				buf = buf[wlen:]
+			} else {
+				break
+			}
+		}
+	}
 
 	if true {
 		buf := apack.ChangeCryKey()
