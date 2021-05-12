@@ -6,7 +6,7 @@ This is a secure network tunnel.
 
 【gstunnel介绍】
 
-gstunnel 是基于go 语言开发的高性能、高并发的轻量级安全网络加密管道，支持tcp协议。
+gstunnel 是基于go 语言开发的高性能、高并发的跨平台轻量级安全网络加密管道，支持tcp协议。
 
 项目采用多协程和无锁模式，保证了gstunnel的高性能和高并发。
 
@@ -33,6 +33,10 @@ Gstunnel只是一个轻量级的网络加密管道，只提供有限的安全性
 支持的应用：
 
 http proxy（squid3等）、email、socks 5 proxy等基于tcp开发的应用。
+
+支持的平台：
+
+windows、linux、mac os
 
 注意：项目存在一些bug，暂时没有修复。这些bug并不影响正常使用。
 
