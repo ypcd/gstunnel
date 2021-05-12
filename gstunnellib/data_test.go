@@ -56,6 +56,7 @@ func Test_JPackandun(t *testing.T) {
 
 func filesha1(fp string) string {
 	f, _ := os.Open(fp)
+	defer f.Close()
 	buf := make([]byte, 1024*1024)
 	h := sha1.New()
 	for {
@@ -157,6 +158,7 @@ func Test_Aest(t *testing.T) {
 
 	fp2 := `testaes2.data`
 	f, _ := os.Open(fp2)
+	defer f.Close()
 
 	buf := make([]byte, 1024*128)
 	var fbuf []byte
@@ -186,6 +188,7 @@ func aest() {
 
 	fp2 := `testaes4.data`
 	f, _ := os.Open(fp2)
+	defer f.Close()
 
 	buf := make([]byte, 1024*128)
 	var fbuf []byte
@@ -214,11 +217,13 @@ func Test_MtAest(t *testing.T) {
 	mtF(aest)
 }
 
+/*
 func Benchmark_Aest(b *testing.B) {
 	b.StopTimer()
 
 	fp2 := `testaes4.data`
 	f, _ := os.Open(fp2)
+	defer f.Close()
 
 	buf := make([]byte, 1024*128)
 	var fbuf []byte
@@ -239,11 +244,12 @@ func Benchmark_Aest(b *testing.B) {
 	b.StopTimer()
 	tmp = outbuf[:]
 }
-
+*/
 func Test_Aestpack(t *testing.T) {
 
 	fp2 := `testaes4.data`
 	f, _ := os.Open(fp2)
+	defer f.Close()
 
 	buf := make([]byte, 1024*128)
 	var fbuf []byte
@@ -274,6 +280,7 @@ func aestpack() {
 
 	fp2 := `testaes4.data`
 	f, _ := os.Open(fp2)
+	defer f.Close()
 
 	buf := make([]byte, 1024*128)
 	var fbuf []byte
@@ -525,5 +532,19 @@ func Test_poversion(t *testing.T) {
 		t.Error("Error.")
 	}
 	_, _ = unb1, err
+
+}
+
+func Test_bytesjoin(t *testing.T) {
+
+	//const totalLoop int = 10000 * 100
+
+	po1 := CreatePackOperChangeKey()
+
+	po1.Data = GetRDBytes(1024)
+
+	if po1.GetSha256_old() != po1.GetSha256() {
+		t.Error("error.")
+	}
 
 }

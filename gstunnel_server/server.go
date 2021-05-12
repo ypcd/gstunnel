@@ -7,6 +7,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"gstunnellib"
 	"log"
@@ -31,7 +32,9 @@ var gsconfig *gstunnellib.GsConfig
 
 var Logger *log.Logger
 
-var debug_client bool = false
+var debug_server bool = false
+
+const net_read_size = 4 * 1024
 
 //var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 //var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
@@ -44,12 +47,12 @@ func init() {
 
 	gsconfig = gstunnellib.CreateGsconfig("config.server.json")
 
-	debug_client = gsconfig.Debug
+	debug_server = gsconfig.Debug
 
-	fmt.Println("debug:", debug_client)
-	Logger.Println("debug:", debug_client)
+	fmt.Println("debug:", debug_server)
+	Logger.Println("debug:", debug_server)
 
-	if debug_client {
+	if debug_server {
 		/*
 			go func() {
 
@@ -144,6 +147,9 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 
 	tmr_changekey := timerm.CreateTimer(time.Minute * 1)
 
+	recot_p_r := timerm.CreateRecoTime()
+	recot_p_w := timerm.CreateRecoTime()
+
 	apack := gstunnellib.CreateAesPack(key)
 
 	fp1 := "CPrecv.data"
@@ -158,12 +164,22 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 	defer src.Close()
 	defer dst.Close()
 	defer outf.Close()
-	buf := make([]byte, 1024*64)
-	var rbuf, wbuf []byte
+	buf := make([]byte, net_read_size)
+	var rbuf []byte
+	var wbuf bytes.Buffer
 
 	wlent, rlent := 0, 0
 
 	ChangeCryKey_Total := 0
+
+	defer func() {
+		fmt.Printf("pack  trlen:%d  twlen:%d\n", rlent, wlent)
+		//fmt.Println("goPackTotal:", goPackTotal)
+		fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
+
+		fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
+		fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
+	}()
 
 	if true {
 		buf := apack.IsTheVersionConsistent()
@@ -217,7 +233,10 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 
 	for {
 
+		recot_p_r.Run()
 		rlen, err := src.Read(buf)
+		recot_p_r.Run()
+
 		rlent = rlent + rlen
 		if tmrP.Run() {
 			fmt.Fprintf(os.Stderr, "%d read end...\n", rlen)
@@ -237,15 +256,22 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 		tmr.Boot()
 		rbuf = buf
 		buf = buf[:rlen]
-		wbuf = append(wbuf, buf...)
-		fre := bool(len(wbuf) > 0)
-		if fre {
-			buf = apack.Packing(wbuf)
-			wbuf = wbuf[len(wbuf):]
+
+		wbuf.Reset()
+		wbuf.Write(buf)
+		//wbuf = append(wbuf, buf...)
+		//fre := bool(len(wbuf) > 0)
+
+		if wbuf.Len() > 0 {
+			buf = apack.Packing(wbuf.Bytes())
+			//wbuf = wbuf[len(wbuf):]
 			outf2.Write(buf)
 			for {
 				if len(buf) > 0 {
+					recot_p_w.Run()
 					wlen, err := dst.Write(buf)
+					recot_p_w.Run()
+
 					wlent = wlent + wlen
 					if wlen == 0 {
 						return
@@ -291,9 +317,14 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 			fmt.Printf("pack  trlen:%d  twlen:%d\n", rlent, wlent)
 			//fmt.Println("goPackTotal:", goPackTotal)
 			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
+
+			fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
+			fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
+
 		}
 
 	}
+
 }
 
 func srcTOdstUn(src net.Conn, dst net.Conn) {
@@ -306,6 +337,9 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 	tmr := timerm.CreateTimer(time.Second * 60)
 	tmrP := timerm.CreateTimer(time.Second * 1)
 	tmrP2 := timerm.CreateTimer(time.Second * 1)
+
+	recot_un_r := timerm.CreateRecoTime()
+	recot_un_w := timerm.CreateRecoTime()
 
 	apack := gstunnellib.CreateAesPack(key)
 
@@ -322,11 +356,22 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 	defer dst.Close()
 	defer outf.Close()
 	defer outf2.Close()
-	buf := make([]byte, 1024*64)
+	buf := make([]byte, net_read_size)
 	var rbuf, wbuf []byte
 	wlent, rlent := 0, 0
+
+	defer func() {
+		fmt.Printf("unpack trlen:%d  twlen:%d\n", rlent, wlent)
+
+		fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
+		fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+	}()
+
 	for {
+		recot_un_r.Run()
 		rlen, err := src.Read(buf)
+		recot_un_r.Run()
+
 		rlent = rlent + rlen
 		if tmrP.Run() {
 			fmt.Fprintf(os.Stderr, "%d read end...\n", rlen)
@@ -365,7 +410,10 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 				outf2.Write(buf)
 				for {
 					if len(buf) > 0 {
+						recot_un_w.Run()
 						wlen, err := dst.Write(buf)
+						recot_un_w.Run()
+
 						wlent = wlent + wlen
 						pf("twlen:%d  wlen:%d\n", wlent, wlen)
 						if wlen == 0 {
@@ -389,7 +437,10 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 		}
 		buf = rbuf
 		if tmrP2.Run() {
-			fmt.Printf("trlen:%d  twlen:%d\n", rlent, wlent)
+			fmt.Printf("unpack trlen:%d  twlen:%d\n", rlent, wlent)
+
+			fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
+			fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 	}
 }

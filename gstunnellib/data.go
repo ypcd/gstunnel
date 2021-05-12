@@ -23,9 +23,10 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"sync"
 )
 
-const Version string = "V2.9"
+const Version string = "V3.2"
 
 var p func(...interface{}) (int, error)
 
@@ -36,6 +37,15 @@ var debug_tag bool
 var commonIV = []byte{171, 158, 1, 73, 31, 98, 64, 85, 209, 217, 131, 150, 104, 219, 33, 220}
 
 var Logger *log.Logger
+
+var bufPool = sync.Pool{
+	New: func() interface{} {
+		// The Pool's New function should generally only return pointer
+		// types, since a pointer can be put into the return interface
+		// value without an allocation:
+		return new(bytes.Buffer)
+	},
+}
 
 func Nullprint(v ...interface{}) (int, error)                       { return 1, nil }
 func Nullprintf(format string, a ...interface{}) (n int, err error) { return 1, nil }
@@ -119,6 +129,63 @@ type packOper struct {
 	HashHex  string
 }
 
+func (po *packOper) GetSha256_old() string {
+	return GetSha256Hex(append(Int32ToBytes(po.OperType), append(po.OperData, append(po.Data, Int64ToBytes(po.Rand)...)...)...))
+}
+
+func (po *packOper) GetSha256() string {
+	return po.GetSha256_buf()
+}
+
+//GetSha256_buf速度比GetSha256_old快15%-20%。
+func (po *packOper) GetSha256_buf() string {
+
+	var buf bytes.Buffer
+	buf.Write(Int32ToBytes(po.OperType))
+	buf.Write(po.OperData)
+	buf.Write(po.Data)
+	buf.Write(Int64ToBytes(po.Rand))
+
+	return GetSha256Hex(buf.Bytes())
+
+}
+
+//为了更好的安全性，默认情况下没有使用GetSha256_pool函数。
+//GetSha256_pool的速度比GetSha256_buf的速度快10%-15%。
+
+func (po *packOper) GetSha256_pool() string {
+
+	buf := bufPool.Get().(*bytes.Buffer)
+	defer bufPool.Put(buf)
+	buf.Reset()
+	//fmt.Println("CAP LEN:", buf.Cap(), buf.Len())
+
+	buf.Write(Int32ToBytes(po.OperType))
+	buf.Write(po.OperData)
+	buf.Write(po.Data)
+	buf.Write(Int64ToBytes(po.Rand))
+
+	h1 := GetSha256Hex(buf.Bytes())
+
+	return h1
+
+}
+
+func (this *packOper) IsOk() error {
+	p1 := this
+	if p1.OperType < POBegin || p1.OperType > POEnd {
+		return errors.New("PackOper OperType is error.")
+	}
+
+	h1 := p1.GetSha256()
+
+	if p1.HashHex == h1 {
+		return nil
+	} else {
+		return errors.New("The packoper hash is inconsistent.")
+	}
+}
+
 func GetRDCInt64() int64 {
 	rd, _ := randc.Int(randc.Reader,
 		big.NewInt(9223372036854775807))
@@ -184,8 +251,7 @@ func GetKey(Data []byte) []byte {
 }
 
 func Int32ToBytes(i32 int32) []byte {
-	buf := make([]byte, 0)
-	bbuf := bytes.NewBuffer(buf)
+	bbuf := new(bytes.Buffer)
 	err := binary.Write(bbuf, binary.LittleEndian, i32)
 	if err != nil {
 		panic(err)
@@ -194,19 +260,12 @@ func Int32ToBytes(i32 int32) []byte {
 }
 
 func Int64ToBytes(data int64) []byte {
-	buf := make([]byte, 0)
-	bbuf := bytes.NewBuffer(buf)
+	bbuf := new(bytes.Buffer)
 	err := binary.Write(bbuf, binary.LittleEndian, data)
 	if err != nil {
 		panic(err)
 	}
 	return bbuf.Bytes()
-}
-
-func (po *packOper) GetSha256() string {
-	return GetSha256Hex(append(Int32ToBytes(po.OperType), append(po.OperData, append(po.Data, Int64ToBytes(po.Rand)...)...)...))
-
-	//return ""
 }
 
 func CreatePackOperGen(data []byte) *packOper {
@@ -316,21 +375,6 @@ func UnPack_Oper(data []byte) packOper {
 	}
 
 	return msg
-}
-
-func (this *packOper) IsOk() error {
-	p1 := this
-	if p1.OperType < POBegin || p1.OperType > POEnd {
-		return errors.New("PackOper OperType is error.")
-	}
-
-	h1 := p1.GetSha256()
-
-	if p1.HashHex == h1 {
-		return nil
-	} else {
-		return errors.New("The packoper hash is inconsistent.")
-	}
 }
 
 func jsonUnPack_OperGen(data []byte) ([]byte, error) {
