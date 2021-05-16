@@ -9,9 +9,12 @@ package gstunnellib
 import (
 	"bytes"
 	"crypto/sha1"
+	"encoding/base64"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"unsafe"
 
 	//"math"
 	"math/rand"
@@ -543,8 +546,82 @@ func Test_bytesjoin(t *testing.T) {
 
 	po1.Data = GetRDBytes(1024)
 
-	if po1.GetSha256_old() != po1.GetSha256() {
-		t.Error("error.")
-	}
+	/*
+		if po1.GetSha256_old() != po1.GetSha256() {
+			t.Error("error.")
+		}
 
+		b1 := po1.GetSha256_old()
+		b2 := po1.GetSha256()
+
+		if hex.EncodeToString(b1[:]) != hex.EncodeToString(b2[:]) {
+			t.Error("error.")
+		}
+	*/
+}
+
+func Test_po_size(t *testing.T) {
+
+	//const totalLoop int = 10000 * 100
+
+	key1 := GetRDBytes(32)
+	//key2 := GetRDBytes(32)
+
+	ap1 := CreateAesPack(string(key1))
+
+	po1 := ap1.Packing([]byte{})
+
+	po2 := CreatePackOperChangeKey()
+
+	_ = po2
+
+	pd := CreatePackOperGen([]byte{})
+
+	re, _ := json.Marshal(pd)
+
+	_ = re
+
+	pd2 := CreatePackOperGen_po1([]byte{})
+
+	re2, _ := json.Marshal(pd2)
+
+	fmt.Println(string(re), len(re))
+	fmt.Println(string(re2), len(re2))
+	t.Log("po size:", len(po1), unsafe.Sizeof(po2))
+
+}
+
+type s_str struct {
+	Data string
+}
+
+type s_bytes struct {
+	Data  []byte
+	Data2 [2]byte
+}
+
+func Test_hex_data(t *testing.T) {
+	v1 := GetRDCInt64()
+	hx1 := hex.EncodeToString(Int64ToBytes(v1))
+	be1 := base64.StdEncoding.EncodeToString(Int64ToBytes(v1))
+	v2, _ := hex.DecodeString(hx1)
+	fmt.Println(v1, hx1, be1, bytes.Equal(Int64ToBytes(v1), v2))
+
+	vv1 := GetRDCBytes(2048)
+	hx2 := hex.EncodeToString(vv1)
+	vv2, _ := hex.DecodeString(hx2)
+	fmt.Println(len(vv1), len(hx2), bytes.Equal(vv1, vv2))
+
+	sv1 := s_bytes{Data: vv1}
+	sv2 := s_str{hx2}
+
+	re, _ := json.Marshal(&sv1)
+	re2, _ := json.Marshal(&sv2)
+
+	fmt.Println(len(re), len(re2)) //, string(re), string(re2))
+}
+
+func Test_GsConfig(t *testing.T) {
+	gs := CreateGsconfig("config.client.json")
+	fmt.Println(gs)
 }

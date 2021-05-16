@@ -24,9 +24,10 @@ import (
 	"math/big"
 	"os"
 	"sync"
+	"sync/atomic"
 )
 
-const Version string = "V3.2"
+const Version string = "V3.6"
 
 var p func(...interface{}) (int, error)
 
@@ -73,10 +74,13 @@ func CreateFileLogger(FileName string) *log.Logger {
 }
 
 type GsConfig struct {
-	Listen string
-	Server string
-	Key    string
-	Debug  bool
+	Listen             string
+	Server             string
+	Key                string
+	Debug              bool
+	Tmr_display_time   int
+	Tmr_changekey_time int
+	Mt_model           bool
 }
 
 func CreateGsconfig(confn string) *GsConfig {
@@ -92,7 +96,21 @@ func CreateGsconfig(confn string) *GsConfig {
 
 	//fmt.Println(string(buf))
 	var gsconfig GsConfig
+
+	gsconfig.Debug = false
+	gsconfig.Tmr_display_time = 5
+	gsconfig.Tmr_changekey_time = 60
+	gsconfig.Mt_model = true
+
 	json.Unmarshal(buf, &gsconfig)
+	/*
+		if gsconfig.Tmr_display_time == 0 {
+			gsconfig.Tmr_display_time = 5
+		}
+		if gsconfig.Tmr_changekey_time == 0 {
+			gsconfig.Tmr_changekey_time = 60
+		}
+	*/
 	return &gsconfig
 }
 
@@ -113,77 +131,115 @@ type PackRandHash struct {
 }
 
 const (
-	POBegin      int32 = 0
-	GenOper      int32 = 1
-	ChangeCryKey int32 = 2
-	POVersion    int32 = 3
-	POEnd        int32 = 4
+	POBegin        uint8 = 0
+	POGenOper      uint8 = 1
+	POChangeCryKey uint8 = 2
+	POVersion      uint8 = 3
+	POEnd          uint8 = 4
 )
 
-//Data, Rand, HashHex, opertype, operData
-type packOper struct {
-	OperType int32
+type packOper_1 struct {
+	OperType uint8
 	OperData []byte
 	Data     []byte
 	Rand     int64
 	HashHex  string
+	//HashHex [32]byte
 }
 
-func (po *packOper) GetSha256_old() string {
-	return GetSha256Hex(append(Int32ToBytes(po.OperType), append(po.OperData, append(po.Data, Int64ToBytes(po.Rand)...)...)...))
+//Data, Rand, HashHex, opertype, operData
+type packOper struct {
+	OperType uint8
+	OperData []byte
+	Data     []byte
+	Rand     []byte
+	HashHex  []byte
 }
 
-func (po *packOper) GetSha256() string {
-	return po.GetSha256_buf()
+func GetSha256Hex(data []byte) string {
+	s1 := sha256.Sum256(data)
+	return hex.EncodeToString(
+		s1[:],
+	)
+}
+
+func GetSha256_32bytes(data []byte) [32]byte {
+	return sha256.Sum256(data)
+}
+
+func GetSha256_old_po1(po *packOper_1) string {
+	return GetSha256Hex(append(Intu8ToBytes(po.OperType), append(po.OperData, append(po.Data, Int64ToBytes(po.Rand)...)...)...))
+}
+
+func (po *packOper) GetSha256_old() [32]byte {
+	return GetSha256_32bytes(append(Intu8ToBytes(po.OperType), append(po.OperData, append(po.Data, po.Rand...)...)...))
+}
+
+func (po *packOper) GetSha256() []byte {
+	v1 := po.GetSha256_buf()
+	//return hex.EncodeToString(v1[:])
+	return v1[:]
 }
 
 //GetSha256_buf速度比GetSha256_old快15%-20%。
-func (po *packOper) GetSha256_buf() string {
+func (po *packOper) GetSha256_buf() [32]byte {
 
 	var buf bytes.Buffer
-	buf.Write(Int32ToBytes(po.OperType))
+	buf.Write(Intu8ToBytes(po.OperType))
 	buf.Write(po.OperData)
 	buf.Write(po.Data)
-	buf.Write(Int64ToBytes(po.Rand))
+	buf.Write(po.Rand)
 
-	return GetSha256Hex(buf.Bytes())
+	return GetSha256_32bytes(buf.Bytes())
 
 }
 
 //为了更好的安全性，默认情况下没有使用GetSha256_pool函数。
 //GetSha256_pool的速度比GetSha256_buf的速度快10%-15%。
 
-func (po *packOper) GetSha256_pool() string {
+func (po *packOper) GetSha256_pool() [32]byte {
 
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer bufPool.Put(buf)
 	buf.Reset()
 	//fmt.Println("CAP LEN:", buf.Cap(), buf.Len())
 
-	buf.Write(Int32ToBytes(po.OperType))
+	buf.Write(Intu8ToBytes(po.OperType))
 	buf.Write(po.OperData)
 	buf.Write(po.Data)
-	buf.Write(Int64ToBytes(po.Rand))
+	buf.Write(po.Rand)
 
-	h1 := GetSha256Hex(buf.Bytes())
+	h1 := GetSha256_32bytes(buf.Bytes())
 
 	return h1
 
 }
 
-func (this *packOper) IsOk() error {
-	p1 := this
+func (po *packOper) IsOk() error {
+	p1 := po
 	if p1.OperType < POBegin || p1.OperType > POEnd {
 		return errors.New("PackOper OperType is error.")
 	}
 
 	h1 := p1.GetSha256()
 
-	if p1.HashHex == h1 {
+	if bytes.Equal(p1.HashHex, h1) {
 		return nil
 	} else {
 		return errors.New("The packoper hash is inconsistent.")
 	}
+}
+
+func (po *packOper) IsChangeCryKey() bool {
+	return po.OperType == POChangeCryKey
+}
+
+func (po *packOper) IsPOVersion() bool {
+	return po.OperType == POVersion
+}
+
+func (po *packOper) IsPOGen() bool {
+	return po.OperType == POGenOper
 }
 
 func GetRDCInt64() int64 {
@@ -239,15 +295,28 @@ func GetRDBytes(byteLen int) []byte {
 }
 
 func IsChangeCryKey(Data []byte) bool {
-	return (UnPack_Oper(Data).OperType == ChangeCryKey)
+	return (UnPack_Oper(Data).OperType == POChangeCryKey)
 }
 
 func IsPOVersion(Data []byte) bool {
 	return (UnPack_Oper(Data).OperType == POVersion)
 }
 
+func IsPOGen(Data []byte) bool {
+	return (UnPack_Oper(Data).OperType == POGenOper)
+}
+
 func GetKey(Data []byte) []byte {
 	return (UnPack_Oper(Data).OperData)
+}
+
+func Intu8ToBytes(v uint8) []byte {
+	bbuf := new(bytes.Buffer)
+	err := binary.Write(bbuf, binary.LittleEndian, v)
+	if err != nil {
+		panic(err)
+	}
+	return bbuf.Bytes()
 }
 
 func Int32ToBytes(i32 int32) []byte {
@@ -268,16 +337,32 @@ func Int64ToBytes(data int64) []byte {
 	return bbuf.Bytes()
 }
 
-func CreatePackOperGen(data []byte) *packOper {
+func CreatePackOperGen_po1(data []byte) *packOper_1 {
 
 	rd := GetRDCInt64()
 
-	pd := packOper{
-		OperType: GenOper,
+	pd := packOper_1{
+		OperType: POGenOper,
 		//OperData: []byte(""),
-		Data:    data,
-		Rand:    rd,
-		HashHex: "",
+		Data: data,
+		Rand: rd,
+		//HashHex: nil,
+	}
+
+	pd.HashHex = GetSha256_old_po1(&pd)
+	return &pd
+}
+
+func CreatePackOperGen(data []byte) *packOper {
+
+	rd := GetRDCBytes(8)
+
+	pd := packOper{
+		OperType: POGenOper,
+		//OperData: []byte(""),
+		Data: data,
+		Rand: rd,
+		//HashHex: nil,
 	}
 
 	pd.HashHex = pd.GetSha256()
@@ -287,15 +372,15 @@ func CreatePackOperGen(data []byte) *packOper {
 func CreatePackOperChangeKey() *packOper {
 
 	//rd := rand_s.Int63()
-	rd := GetRDCInt64()
+	rd := GetRDCBytes(8)
 
 	key := GetRDBytes(32)
 
 	pd := packOper{
-		OperType: ChangeCryKey,
+		OperType: POChangeCryKey,
 		OperData: []byte(key),
 		Rand:     rd,
-		HashHex:  "",
+		//HashHex:  "",
 	}
 
 	pd.HashHex = pd.GetSha256()
@@ -304,13 +389,13 @@ func CreatePackOperChangeKey() *packOper {
 
 func CreatePackOperVersion() *packOper {
 
-	rd := GetRDCInt64()
+	rd := GetRDCBytes(8)
 
 	pd := packOper{
 		OperType: POVersion,
 		OperData: []byte(Version),
 		Rand:     rd,
-		HashHex:  "",
+		//HashHex:  "",
 	}
 
 	pd.HashHex = pd.GetSha256()
@@ -360,11 +445,11 @@ func jsonPacking_OperGen(data []byte) []byte {
 	return append(re, 0)
 }
 
-func UnPack_Oper(data []byte) packOper {
+func UnPack_Oper(data []byte) *packOper {
 	var msg packOper
 	ix, re := Find0(data)
 	if !re {
-		return packOper{}
+		return &packOper{}
 	}
 	data2 := data[:ix]
 
@@ -374,7 +459,7 @@ func UnPack_Oper(data []byte) packOper {
 		p("json: ", string(data2))
 	}
 
-	return msg
+	return &msg
 }
 
 func jsonUnPack_OperGen(data []byte) ([]byte, error) {
@@ -382,13 +467,6 @@ func jsonUnPack_OperGen(data []byte) ([]byte, error) {
 	p1 := UnPack_Oper(data)
 
 	return p1.Data[:], p1.IsOk()
-}
-
-func GetSha256Hex(data []byte) string {
-	s1 := sha256.Sum256(data)
-	return hex.EncodeToString(
-		s1[:],
-	)
 }
 
 func Find0(v1 []byte) (int, bool) {
@@ -454,18 +532,27 @@ func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 	var pdata []byte
 	var err error
 
-	if IsChangeCryKey(jdata) {
+	po1 := UnPack_Oper(jdata)
+
+	err = po1.IsOk()
+	if err != nil {
+		return []byte{}, err
+	}
+
+	if po1.IsChangeCryKey() {
 		err = ap.setKey(GetKey(jdata))
 		pdata = []byte{}
 		return pdata, err
 	}
 
-	if IsPOVersion(jdata) {
-		po1 := UnPack_Oper(jdata)
-		err := po1.IsOk()
-		if err != nil {
-			return []byte{}, err
-		}
+	if po1.IsPOVersion() {
+		//po1 := po
+		/*
+			err := po1.IsOk()
+			if err != nil {
+				return []byte{}, err
+			}
+		*/
 		if po1.OperType == POVersion {
 			if string(po1.OperData) == Version {
 				pdata = []byte{}
@@ -477,8 +564,9 @@ func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 		}
 		return pdata, err
 	}
-
-	pdata, err = jsonUnpack(jdata)
+	if po1.IsPOGen() {
+		return po1.Data, err
+	}
 
 	return pdata, err
 }
@@ -519,4 +607,28 @@ func CreateAesPack(key string) Aespack {
 	ap1.a = CreateAes(key)
 
 	return ap1
+}
+
+type Gorou_status struct {
+	status int32
+}
+
+const (
+	gorou_s_begin = 0
+	gorou_s_ok    = 1
+	gorou_s_close = 2
+	gorou_s_end   = 3
+)
+
+func (g *Gorou_status) IsOk() bool {
+	v1 := atomic.LoadInt32(&g.status)
+	return v1 == gorou_s_ok
+}
+func (g *Gorou_status) SetOk()    { atomic.SwapInt32(&g.status, gorou_s_ok) }
+func (g *Gorou_status) SetClose() { atomic.SwapInt32(&g.status, gorou_s_close) }
+
+func CreateGorouStatus() *Gorou_status {
+	g1 := new(Gorou_status)
+	g1.status = gorou_s_ok
+	return g1
 }
