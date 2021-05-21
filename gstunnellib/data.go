@@ -8,6 +8,7 @@ package gstunnellib
 
 import (
 	"bytes"
+	"compress/flate"
 	"crypto/aes"
 	"crypto/cipher"
 	randc "crypto/rand"
@@ -18,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"math"
@@ -27,7 +29,7 @@ import (
 	"sync/atomic"
 )
 
-const Version string = "V3.6"
+const Version string = "V3.8"
 
 var p func(...interface{}) (int, error)
 
@@ -73,7 +75,7 @@ func CreateFileLogger(FileName string) *log.Logger {
 	return Logger
 }
 
-type GsConfig struct {
+type GsConfig_1 struct {
 	Listen             string
 	Server             string
 	Key                string
@@ -81,6 +83,23 @@ type GsConfig struct {
 	Tmr_display_time   int
 	Tmr_changekey_time int
 	Mt_model           bool
+}
+
+type GsConfig struct {
+	Listen             string
+	Servers            []string
+	Key                string
+	Debug              bool
+	Tmr_display_time   int
+	Tmr_changekey_time int
+	Mt_model           bool
+}
+
+func (gs *GsConfig) GetServer() string {
+	return gs.Servers[GetRDCInt_max(int64(len(gs.Servers)))]
+}
+func (gs *GsConfig) GetServers() []string {
+	return gs.Servers
 }
 
 func CreateGsconfig(confn string) *GsConfig {
@@ -111,6 +130,9 @@ func CreateGsconfig(confn string) *GsConfig {
 			gsconfig.Tmr_changekey_time = 60
 		}
 	*/
+	if gsconfig.Servers == nil {
+		Logger.Fatalln("gsconfig.Servers==nil")
+	}
 	return &gsconfig
 }
 
@@ -240,6 +262,12 @@ func (po *packOper) IsPOVersion() bool {
 
 func (po *packOper) IsPOGen() bool {
 	return po.OperType == POGenOper
+}
+
+func GetRDCInt_max(max int64) int64 {
+	rd, _ := randc.Int(randc.Reader,
+		big.NewInt(max))
+	return rd.Int64()
 }
 
 func GetRDCInt64() int64 {
@@ -517,18 +545,75 @@ func (a *Aes) decrypter(data []byte) []byte {
 }
 
 type Aespack struct {
-	a Aes
+	a        Aes
+	fewriter *flate.Writer
+	fereader io.ReadCloser
+}
+
+func (ap *Aespack) compress2(data []byte) []byte   { return data }
+func (ap *Aespack) uncompress2(data []byte) []byte { return data }
+
+func (ap *Aespack) compress(data []byte) []byte {
+	var b bytes.Buffer
+
+	if ap.fewriter == nil {
+		zw, err := flate.NewWriter(&b, 1)
+		ap.fewriter = zw
+		if err != nil {
+			Logger.Fatalln(err)
+		}
+	} else {
+		ap.fewriter.Reset(&b)
+	}
+
+	zw := ap.fewriter
+
+	if _, err := io.Copy(zw, bytes.NewReader(data)); err != nil {
+		Logger.Fatalln(err)
+	}
+	if err := zw.Close(); err != nil {
+		Logger.Fatalln(err)
+	}
+
+	return b.Bytes()
+}
+
+func (ap *Aespack) uncompress(data []byte) []byte {
+	var b bytes.Buffer
+
+	if ap.fereader == nil {
+		zr := flate.NewReader(bytes.NewReader(data))
+		ap.fereader = zr
+	} else {
+		zr := ap.fereader
+		if err := zr.(flate.Resetter).Reset(bytes.NewReader(data), nil); err != nil {
+			Logger.Fatalln(err)
+		}
+	}
+	zr := ap.fereader
+
+	if _, err := io.Copy(&b, zr); err != nil {
+		Logger.Fatalln(err)
+	}
+	if err := zr.Close(); err != nil {
+		Logger.Fatalln(err)
+	}
+
+	return b.Bytes()
 }
 
 func (ap *Aespack) Packing(data []byte) []byte {
 	jdata := jsonPacking(data)
-	crydata := ap.a.encrypter(jdata)
+	cdata := ap.compress(jdata)
+	crydata := ap.a.encrypter(cdata)
 	edata := base64.StdEncoding.EncodeToString(crydata)
 	return append([]byte(edata), 0)
 }
 func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 	d1, _ := base64.StdEncoding.DecodeString(string(data))
 	jdata := ap.a.decrypter(d1)
+	undata := ap.uncompress(jdata)
+	jdata = undata
 	var pdata []byte
 	var err error
 
@@ -579,7 +664,8 @@ func (ap *Aespack) setKey(key []byte) error {
 func (ap *Aespack) ChangeCryKey() []byte {
 
 	jdata := jsonPacking_OperChangeKey()
-	crydata := ap.a.encrypter(jdata)
+	cdata := ap.compress(jdata)
+	crydata := ap.a.encrypter(cdata)
 	edata := base64.StdEncoding.EncodeToString(crydata)
 
 	ap.setKey(GetKey(jdata))
@@ -590,7 +676,8 @@ func (ap *Aespack) ChangeCryKey() []byte {
 func (ap *Aespack) IsTheVersionConsistent() []byte {
 
 	jdata := jsonPacking_OperVersion()
-	crydata := ap.a.encrypter(jdata)
+	cdata := ap.compress(jdata)
+	crydata := ap.a.encrypter(cdata)
 	edata := base64.StdEncoding.EncodeToString(crydata)
 
 	return append([]byte(edata), 0)
@@ -605,6 +692,8 @@ func CreateAesPack(key string) Aespack {
 	}
 	ap1 := Aespack{}
 	ap1.a = CreateAes(key)
+	ap1.fewriter = nil
+	ap1.fereader = nil
 
 	return ap1
 }

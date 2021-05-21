@@ -103,7 +103,7 @@ func run() {
 		key = os.Args[3]
 	} else {
 		lstnaddr = gsconfig.Listen
-		connaddr = gsconfig.Server
+		connaddr = gsconfig.GetServer()
 		key = gsconfig.Key
 	}
 
@@ -124,9 +124,9 @@ func run() {
 		}
 
 		service := connaddr
-		tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
-		fmt.Println(tcpAddr)
-		checkError(err)
+		//tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
+		//fmt.Println(tcpAddr)
+		//checkError(err)
 		dst, err := net.Dial("tcp", service)
 		checkError(err)
 		fmt.Println("conn.")
@@ -347,7 +347,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		}
 	}()
 
-	tmr_out := timerm.CreateTimer(time.Second * 60)
+	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
@@ -381,12 +381,12 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	dst_ok := gstunnellib.CreateGorouStatus()
 
 	defer func() {
-		fmt.Println("gorou exit.")
-		fmt.Printf("\tpack  trlen:%d\n", rlent)
+		fmt.Println("\tgorou exit.")
+		fmt.Printf("\t\tpack  trlen:%d\n", rlent)
 		//fmt.Println("goPackTotal:", goPackTotal)
-		fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
+		fmt.Println("\tChangeCryKey_total:", ChangeCryKey_Total)
 
-		fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
+		fmt.Println("\tRecoTime_p_r All: ", recot_p_r.StringAll())
 	}()
 
 	if true {
@@ -439,7 +439,8 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		}
 	}
 
-	go srcTOdstP_w(dst, dst_chan, dst_ok, &apack, wlent)
+	go srcTOdstP_w(dst, dst_chan, dst_ok, wlent)
+	dst = nil
 
 	for dst_ok.IsOk() {
 
@@ -473,6 +474,10 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 		buf = make([]byte, net_read_size)
 
+		if !dst_ok.IsOk() {
+			return
+		}
+
 		if tmr_changekey.Run() {
 			buf := apack.ChangeCryKey()
 			ChangeCryKey_Total += 1
@@ -480,7 +485,6 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 			outf2.Write(buf)
 
 			dst_chan <- buf
-			//buf = make([]byte, net_read_size)
 		}
 
 		if tmrP2.Run() {
@@ -494,7 +498,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	}
 }
 
-func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status, aespack *gstunnellib.Aespack, wlentotal uint64) {
+func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status, wlentotal uint64) {
 	defer func() {
 		if x := recover(); x != nil {
 			fmt.Println("Go exit.")
@@ -504,7 +508,7 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 		}
 	}()
 
-	tmr_out := timerm.CreateTimer(time.Second * 60)
+	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
 	recot_p_w := timerm.CreateRecoTime()
@@ -743,7 +747,6 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	//tmr_changekey := timerm.CreateTimer(time.Minute * 10)
 
 	recot_un_r := timerm.CreateRecoTime()
-	recot_un_w := timerm.CreateRecoTime()
 
 	//apack := gstunnellib.CreateAesPack(key)
 
@@ -763,7 +766,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	buf := make([]byte, net_read_size)
 	//var rbuf []byte
 	//var wbuff bytes.Buffer
-	wlent, rlent := 0, 0
+	rlent := int64(0)
 
 	dst_chan := make(chan ([]byte), netPUn_chan_cache_size)
 	defer close(dst_chan)
@@ -771,14 +774,14 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	dst_ok := gstunnellib.CreateGorouStatus()
 
 	go srcTOdstUn_w(dst, dst_chan, dst_ok)
+	dst = nil
 
 	defer func() {
-		fmt.Println("gorou exit.")
-		fmt.Printf("\tunpack  trlen:%d  twlen:%d\n", rlent, wlent)
+		fmt.Println("\tgorou exit.")
+		fmt.Printf("\t\tunpack  trlen:%d\n", rlent)
 		//fmt.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
-		fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
-		fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+		fmt.Println("\tRecoTime_un_r All: ", recot_un_r.StringAll())
 	}()
 
 	for dst_ok.IsOk() {
@@ -790,13 +793,11 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 
 		pf("trlen:%d  rlen:%d\n", rlent, rlen)
 
-		rlent = rlent + rlen
+		rlent = rlent + int64(rlen)
 		//rlen = 0
 
 		if tmrP.Run() {
 			fmt.Fprintf(os.Stdout, "%d read end...\n", rlen)
-			x1 := 1
-			x1++
 		}
 
 		if tmr_out.Run() {
@@ -869,11 +870,11 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 	var wlent uint64 = 0
 
 	defer func() {
-		fmt.Println("gorou exit.")
-		fmt.Printf("\tunpack  twlen:%d\n", wlent)
+		fmt.Println("\tgorou exit.")
+		fmt.Printf("\t\tunpack  twlen:%d\n", wlent)
 		//fmt.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
-		fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+		fmt.Println("\tRecoTime_un_w All: ", recot_un_w.StringAll())
 	}()
 
 	defer func() {

@@ -8,12 +8,17 @@ package gstunnellib
 
 import (
 	"bytes"
+	"compress/flate"
 	"crypto/sha1"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"strings"
+	"timerm"
 	"unsafe"
 
 	//"math"
@@ -57,6 +62,7 @@ func Test_JPackandun(t *testing.T) {
 	}
 }
 
+/*
 func filesha1(fp string) string {
 	f, _ := os.Open(fp)
 	defer f.Close()
@@ -72,13 +78,14 @@ func filesha1(fp string) string {
 		}
 	}
 }
-
+*/
 func getsha1(data []byte) string {
 	h := sha1.New()
 	h.Write(data)
 	return fmt.Sprintf("%X", h.Sum(nil))
 }
 
+/*
 func Test_Filesha1(t *testing.T) {
 	fp2 := `testaes.data`
 	p(filesha1(fp2))
@@ -88,7 +95,7 @@ func Test_Filesha1(t *testing.T) {
 		t.Error()
 	}
 }
-
+*/
 /*
 func Test_Packandun(t *testing.T) {
 
@@ -159,19 +166,7 @@ func mtF(frun ftype) {
 
 func Test_Aest(t *testing.T) {
 
-	fp2 := `testaes2.data`
-	f, _ := os.Open(fp2)
-	defer f.Close()
-
-	buf := make([]byte, 1024*128)
-	var fbuf []byte
-	for {
-		n, _ := f.Read(buf)
-		if n == 0 {
-			break
-		}
-		fbuf = append(fbuf, buf[:n]...)
-	}
+	fbuf := GetRDCBytes(1024 * 1024)
 
 	a1 := CreateAes("5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ")
 
@@ -189,19 +184,7 @@ func Test_Aest(t *testing.T) {
 
 func aest() {
 
-	fp2 := `testaes4.data`
-	f, _ := os.Open(fp2)
-	defer f.Close()
-
-	buf := make([]byte, 1024*128)
-	var fbuf []byte
-	for {
-		n, _ := f.Read(buf)
-		if n == 0 {
-			break
-		}
-		fbuf = append(fbuf, buf[:n]...)
-	}
+	fbuf := GetRDCBytes(1024 * 1024)
 
 	a1 := CreateAes("5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ")
 	tmp := a1.encrypter(fbuf)
@@ -250,19 +233,7 @@ func Benchmark_Aest(b *testing.B) {
 */
 func Test_Aestpack(t *testing.T) {
 
-	fp2 := `testaes4.data`
-	f, _ := os.Open(fp2)
-	defer f.Close()
-
-	buf := make([]byte, 1024*128)
-	var fbuf []byte
-	for {
-		n, _ := f.Read(buf)
-		if n == 0 {
-			break
-		}
-		fbuf = append(fbuf, buf[:n]...)
-	}
+	fbuf := GetRDCBytes(1024 * 1024)
 
 	a1 := CreateAesPack("5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ")
 
@@ -281,19 +252,7 @@ func Test_Aestpack(t *testing.T) {
 
 func aestpack() {
 
-	fp2 := `testaes4.data`
-	f, _ := os.Open(fp2)
-	defer f.Close()
-
-	buf := make([]byte, 1024*128)
-	var fbuf []byte
-	for {
-		n, _ := f.Read(buf)
-		if n == 0 {
-			break
-		}
-		fbuf = append(fbuf, buf[:n]...)
-	}
+	fbuf := GetRDCBytes(1024 * 1024)
 
 	a1 := CreateAesPack("5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ")
 	tmp := a1.Packing(fbuf)
@@ -587,6 +546,7 @@ func Test_po_size(t *testing.T) {
 
 	fmt.Println(string(re), len(re))
 	fmt.Println(string(re2), len(re2))
+	fmt.Println("po size:", len(po1), unsafe.Sizeof(po2))
 	t.Log("po size:", len(po1), unsafe.Sizeof(po2))
 
 }
@@ -624,4 +584,155 @@ func Test_hex_data(t *testing.T) {
 func Test_GsConfig(t *testing.T) {
 	gs := CreateGsconfig("config.client.json")
 	fmt.Println(gs)
+}
+
+func Test_json_data(t *testing.T) {
+
+	type s_str2 struct {
+		Data []string
+	}
+
+	sv2 := s_str2{[]string{"1", "2"}}
+
+	//re, _ := json.Marshal(&sv1)
+	re := ""
+	re2, _ := json.Marshal(&sv2)
+
+	fmt.Println(len(re), len(re2))
+	fmt.Println((re), string(re2))
+}
+
+func Test_GetRDCInt_max(t *testing.T) {
+	for i := 0; i < 10; i++ {
+		fmt.Println(GetRDCInt_max(2))
+	}
+}
+
+func Test_GsConfig_getserver(t *testing.T) {
+	gs := CreateGsconfig("config3.client.json")
+	fmt.Println(gs)
+	for i := 0; i < 10; i++ {
+		fmt.Println(gs.GetServer())
+	}
+}
+
+func Test_compress(t *testing.T) {
+	const data = `<?xml version="1.0"?>
+<book>
+	<meta name="title" content="The Go Programming Language"/>
+	<meta name="authors" content="Alan Donovan and Brian Kernighan"/>
+	<meta name="published" content="2015-10-26"/>
+	<meta name="isbn" content="978-0134190440"/>
+	<data>...</data>
+</book>
+`
+
+	var b bytes.Buffer
+
+	rt := timerm.CreateRecoTime()
+	// Compress the data using the specially crafted dictionary.
+	fmt.Println(rt.Run())
+	zw, err := flate.NewWriter(&b, 1)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	if _, err := io.Copy(zw, strings.NewReader(data)); err != nil {
+		log.Fatal(err)
+	}
+	if err := zw.Close(); err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(rt.Run())
+	fmt.Println(b.Bytes())
+	fmt.Println(len(data), b.Len(), float32(b.Len())/float32(len(data)))
+
+	zr := flate.NewReader(bytes.NewReader(b.Bytes()))
+	if _, err := io.Copy(os.Stdout, zr); err != nil {
+		log.Fatal(err)
+	}
+	if err := zr.Close(); err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println()
+}
+
+func Test_compress_un(t *testing.T) {
+	ap1 := CreateAesPack("1234567890123456")
+	data1 := GetRDCBytes(1024 * 6)
+
+	const data2 = `<?xml version="1.0"?>
+<book>
+	<meta name="title" content="The Go Programming Language"/>
+	<meta name="authors" content="Alan Donovan and Brian Kernighan"/>
+	<meta name="published" content="2015-10-26"/>
+	<meta name="isbn" content="978-0134190440"/>
+	<data>...</data>
+</book>
+`
+
+	pd := CreatePackOperGen([]byte(data1))
+
+	re, _ := json.Marshal(pd)
+
+	_ = re
+
+	data := []byte(re)
+
+	rt := timerm.CreateRecoTime()
+	fmt.Println(rt.Run())
+	cdata := ap1.compress(data)
+	fmt.Println(rt.Run())
+	fmt.Println("compress:", float32(len(cdata))/float32(len(data)))
+
+	undata := ap1.uncompress(cdata)
+	if bytes.Equal(data, undata) {
+		t.Log("ok.")
+	} else {
+		t.Log("Error.")
+	}
+}
+
+func Test_compress_un2(t *testing.T) {
+	ap1 := CreateAesPack("1234567890123456")
+	data1 := GetRDCBytes(1024 * 6)
+
+	const data2 = `<?xml version="1.0"?>
+<book>
+	<meta name="title" content="The Go Programming Language"/>
+	<meta name="authors" content="Alan Donovan and Brian Kernighan"/>
+	<meta name="published" content="2015-10-26"/>
+	<meta name="isbn" content="978-0134190440"/>
+	<data>...</data>
+</book>
+`
+
+	pd := CreatePackOperGen([]byte(data1))
+
+	re, _ := json.Marshal(pd)
+
+	_ = re
+
+	data := []byte(re)
+
+	rt := timerm.CreateRecoTime()
+	fmt.Println(rt.Run())
+	cdata := ap1.Packing(data)
+	fmt.Println(rt.Run())
+	fmt.Println("compress:", float32(len(cdata))/float32(len(data)))
+
+	undata, _ := ap1.Unpack(cdata)
+	if bytes.Equal(data, undata) {
+		t.Log("ok.")
+	} else {
+		t.Log("Error.")
+	}
+}
+
+func Test_pack_type_size(t *testing.T) {
+	ap1 := CreateAesPack("1234567890123456")
+	fmt.Println(len(ap1.Packing([]byte{})))
+	fmt.Println(len(ap1.ChangeCryKey()))
+	fmt.Println(len(ap1.IsTheVersionConsistent()))
 }
