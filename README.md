@@ -106,13 +106,13 @@ type GsConfig struct {
 必选参数
 listen:	监听地址（字符串）
 server:	目标地址（字符串）
-key:		aes加密密钥（字符串数组）
+key:	aes加密密钥（字符串数组）
 
 可选参数
-debug:		是否开启调试模式（true或false）
-Tmr_display_time	设置输出到标准输出流的信息的间隔时间（单位为时间）
-Tmr_changekey_time 设置动态密钥经过多长时间进行更换（单位为秒）
-Mt_model           是否在主逻辑模块开启多协程模式（true或false）
+debug:			是否开启调试模式（true或false）
+Tmr_display_time	设置输出到标准输出流的信息的间隔时间（单位为秒）
+Tmr_changekey_time 	设置动态密钥经过多长时间进行更换（单位为秒）
+Mt_model           	是否在主逻辑模块开启多协程模式（true或false）
 ```
 ```
 配置文件示例：
@@ -133,17 +133,17 @@ key:	aes加密密钥
 
 Linux bash：
 
-root@ubuntu:~# ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 “1234567890123456“
+user@ubuntu:~$ ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 “1234567890123456“
 
-root@ubuntu:~# ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 “1234567890123456“
+user@ubuntu:~$ ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 “1234567890123456“
 
 注意：请保证client在linux系统中为可执行文件。是否是可执行文件，请查看client文件的文件属性。
 
 Windows cmd：
 
-C:> ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 “1234567890123456“
+C:> ./gstunnel_client.exe 127.0.0.1:3128 1.2.3.4:43210 “1234567890123456“
 
-C:> ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 “1234567890123456“
+C:> ./gstunnel_server.exe 1.2.3.4:43210 1.2.3.4:3128 “1234567890123456“
 
 日志
 
@@ -155,6 +155,8 @@ gstunnel在工作目录下自动生成日志文件，日志文件记录gstunnel�
 项目基于GPLv3协议开源。
 
 ---------------------------------------------
+This is a secure network tunnel.
+
 note:
 It is recommended to use the project source code of version 2.7 or higher.
 The source code of version lower than 2.7 has serious security vulnerabilities.
@@ -239,12 +241,14 @@ At this time you get two executable files gstunnel_client and gstunnel_server.
 
 If there is a problem in compiling the source code, please try to enter the command "set GO111MODULE=off" to turn off the go module function.
 
+Configuration parameter
+
 Executable file, accepts command line-based parameter input (not recommended) and configuration file (json)-based parameter settings.
 It is recommended to use a configuration file (json) to configure the parameters.
 The configuration file name of the client: config.client.json
 The configuration file name of the server: config.server.json
 Configuration file parameters:
-
+```
 type GsConfig struct {
 Listen string
 Servers []string
@@ -254,6 +258,8 @@ Tmr_display_time int
 Tmr_changekey_time int
 Mt_model bool
 }
+```
+```
 Required parameters
 listen: listening address (string)
 server: destination address (string)
@@ -261,10 +267,11 @@ key: aes encryption key (string array)
 
 Optional parameters
 debug: whether to enable debug mode (true or false)
-Tmr_display_time Set the interval time of information output to the standard output stream (unit is time)
+Tmr_display_time sets the interval time (in seconds) of information output to the standard output stream
 Tmr_changekey_time Set how long it takes for the dynamic key to be changed (unit: second)
 Mt_model Whether to enable multi-coroutine mode in the main logic module (true or false)
-
+```
+```
 Example configuration file:
 
 {"listen": "127.0.0.1:33128", "server": ["127.0.0.1:10036"], "key": "1234567890123456"}
@@ -272,7 +279,7 @@ Example configuration file:
 listen: listening address
 server: destination address
 key: aes encryption key
-
+```
 Command line format:
 
 Executable file name Listening address Target address aes password
@@ -283,17 +290,17 @@ for example:
 
 Linux bash:
 
-root@ubuntu:~# ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 "1234567890123456"
+user@ubuntu:~$ ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 "1234567890123456"
 
-root@ubuntu:~# ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
+user@ubuntu:~$ ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
 
 Note: Please ensure that the client is an executable file in the Linux system. Whether it is an executable file, please check the file attributes of the client file.
 
 Windows cmd:
 
-C:> ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 "1234567890123456"
+C:> ./gstunnel_client.exe 127.0.0.1:3128 1.2.3.4:43210 "1234567890123456"
 
-C:> ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
+C:> ./gstunnel_server.exe 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
 
 Log
 
