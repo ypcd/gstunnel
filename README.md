@@ -91,7 +91,7 @@ gstunnel 为a、b之间的网络通信提供了一个加密层。
 client的配置文件名：config.client.json
 server的配置文件名：config.server.json
 配置文件参数：
-
+```
 type GsConfig struct {
 	Listen             string
 	Servers            []string
@@ -101,6 +101,8 @@ type GsConfig struct {
 	Tmr_changekey_time int
 	Mt_model           bool
 }
+```
+```
 必选参数
 listen:	监听地址（字符串）
 server:	目标地址（字符串）
@@ -111,15 +113,16 @@ debug:		是否开启调试模式（true或false）
 Tmr_display_time	设置输出到标准输出流的信息的间隔时间（单位为时间）
 Tmr_changekey_time 设置动态密钥经过多长时间进行更换（单位为秒）
 Mt_model           是否在主逻辑模块开启多协程模式（true或false）
-
+```
+```
 配置文件示例：
 
 {"listen": "127.0.0.1:33128", "server": ["127.0.0.1:10036"], "key": "1234567890123456"}
 
 listen:	监听地址
 server:	目标地址
-key:		aes加密密钥
-
+key:	aes加密密钥
+```
 命令行格式:
 
 可执行文件名 监听地址 目标地址 aes密码
