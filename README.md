@@ -30,13 +30,23 @@ golang并没有在语言层面提供完整的内存安全性保证。golang使�
 
 Gstunnel只是一个轻量级的网络加密管道，只提供有限的安全性，安全性低于openvpn和ipsec等主流的vpn产品，无法替代主流的vpn。
 
+gstunnel相对于传统vpn，也有一些安全优势。
+gstunnel只是普通的用户态程序，不需要专属的vpn驱动程序（一般为内核态驱动，具有最高权限）。所以即使gstunnel出现严重的安全漏洞，一般情况下，也不会危害到整个操作系统的安全。
+gstunnel的动态密钥，比传统vpn使用的静态密钥具有更好的安全性。
+
+gstunnel加密隧道可以是长连接，也可以是短连接，具体表现取决于所承载业务连接特性。如果业务连接是长连接，加密隧道也会保持长连接，如果业务连接是短连接，加密隧道就会是短连接。
+
+gstunnel client的一个业务连接，在mt模式下，将产生4个业务协程；在非mt模式下将产生2个业务协程。
+
+gstunnel client的一个业务连接，对应一个单独独享的加密密钥，每个业务连接使用不同的加密密钥。
+如果gstunnel client有10个业务连接，就会有十个不同的加密密钥，每个加密密钥负责一个业务连接的加密解密。
+
+支持的平台：
+windows、linux、mac os
+
 支持的应用：
 
 http proxy（squid3等）、email、socks 5 proxy等基于tcp开发的应用。
-
-支持的平台：
-
-windows、linux、mac os
 
 注意：项目存在一些bug，暂时没有修复。这些bug并不影响正常使用。
 
@@ -74,13 +84,37 @@ gstunnel 为a、b之间的网络通信提供了一个加密层。
 
 编译源代码如果出现问题，请尝试输入命令“set GO111MODULE=off”，关闭go模块功能。
 
-可执行文件，接受基于命令行的参数输入和基于配置文件（json）的参数设置。
+配置参数
+
+可执行文件，接受基于命令行的参数输入（不推荐使用）和基于配置文件（json）的参数设置。
 推荐使用配置文件（json）配置参数。
 client的配置文件名：config.client.json
 server的配置文件名：config.server.json
+配置文件参数：
+
+type GsConfig struct {
+	Listen             string
+	Servers            []string
+	Key                string
+	Debug              bool
+	Tmr_display_time   int
+	Tmr_changekey_time int
+	Mt_model           bool
+}
+必选参数
+listen:	监听地址（字符串）
+server:	目标地址（字符串）
+key:		aes加密密钥（字符串数组）
+
+可选参数
+debug:		是否开启调试模式（true或false）
+Tmr_display_time	设置输出到标准输出流的信息的间隔时间（单位为时间）
+Tmr_changekey_time 设置动态密钥经过多长时间进行更换（单位为秒）
+Mt_model           是否在主逻辑模块开启多协程模式（true或false）
+
 配置文件示例：
 
-{"listen": "127.0.0.1:33128", "server": "127.0.0.1:10036", "key": "1234567890123456"}
+{"listen": "127.0.0.1:33128", "server": ["127.0.0.1:10036"], "key": "1234567890123456"}
 
 listen:	监听地址
 server:	目标地址
@@ -117,17 +151,14 @@ gstunnel在工作目录下自动生成日志文件，日志文件记录gstunnel�
 
 项目基于GPLv3协议开源。
 
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-This is a secure network tunnel.
-
+---------------------------------------------
 note:
 It is recommended to use the project source code of version 2.7 or higher.
 The source code of version lower than 2.7 has serious security vulnerabilities.
 
 [Introduction of gstunnel]
 
-gstunnel is a high-performance, high-concurrency, lightweight security network encryption pipeline developed based on the go language, and supports the tcp protocol.
+gstunnel is a high-performance, high-concurrency cross-platform lightweight security network encryption pipeline developed based on the go language, supporting the tcp protocol.
 
 The project adopts multi-coroutine and lock-free mode to ensure the high performance and high concurrency of gstunnel.
 
@@ -150,6 +181,20 @@ In order to ensure higher security, the project uses a strong random number gene
 It is not recommended to use gstunnel as a complete substitute for VPN (openvpn, ipsec, etc.).
 
 Gstunnel is just a lightweight network encryption pipeline, which only provides limited security. The security is lower than mainstream VPN products such as openvpn and ipsec, and cannot replace mainstream VPNs.
+
+Compared with traditional VPN, gstunnel also has some security advantages.
+gstunnel is just an ordinary user-mode program and does not require a dedicated vpn driver (usually a kernel-mode driver with the highest authority). Therefore, even if gstunnel has serious security vulnerabilities, under normal circumstances, it will not endanger the security of the entire operating system.
+The dynamic key of gstunnel has better security than the static key used by traditional VPN.
+
+The gstunnel encrypted tunnel can be a long connection or a short connection, and the specific performance depends on the connection characteristics of the carried service. If the business connection is a long connection, the encrypted tunnel will also remain a long connection. If the business connection is a short connection, the encrypted tunnel will be a short connection.
+
+A business connection of the gstunnel client, in the mt mode, will produce 4 business coroutines; in the non-mt mode, will produce 2 business coroutines.
+
+A service connection of the gstunnel client corresponds to a separate and exclusive encryption key, and each service connection uses a different encryption key.
+If the gstunnel client has 10 business connections, there will be ten different encryption keys, and each encryption key is responsible for the encryption and decryption of a business connection.
+
+Supported platforms:
+windows, linux, mac os
 
 Supported applications:
 
@@ -189,15 +234,37 @@ Use the command line tool to compile or install the project source code.
 
 At this time you get two executable files gstunnel_client and gstunnel_server.
 
-If there is a problem with compiling the source code, please try to enter the command "set GO111MODULE=off" to turn off the go module function.
+If there is a problem in compiling the source code, please try to enter the command "set GO111MODULE=off" to turn off the go module function.
 
-Executable file, accepts command line-based parameter input and configuration file (json)-based parameter settings.
+Executable file, accepts command line-based parameter input (not recommended) and configuration file (json)-based parameter settings.
 It is recommended to use a configuration file (json) to configure the parameters.
 The configuration file name of the client: config.client.json
 The configuration file name of the server: config.server.json
+Configuration file parameters:
+
+type GsConfig struct {
+Listen string
+Servers []string
+Key string
+Debug bool
+Tmr_display_time int
+Tmr_changekey_time int
+Mt_model bool
+}
+Required parameters
+listen: listening address (string)
+server: destination address (string)
+key: aes encryption key (string array)
+
+Optional parameters
+debug: whether to enable debug mode (true or false)
+Tmr_display_time Set the interval time of information output to the standard output stream (unit is time)
+Tmr_changekey_time Set how long it takes for the dynamic key to be changed (unit: second)
+Mt_model Whether to enable multi-coroutine mode in the main logic module (true or false)
+
 Example configuration file:
 
-{"listen": "127.0.0.1:33128", "server": "127.0.0.1:10036", "key": "1234567890123456"}
+{"listen": "127.0.0.1:33128", "server": ["127.0.0.1:10036"], "key": "1234567890123456"}
 
 listen: listening address
 server: destination address
