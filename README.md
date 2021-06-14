@@ -160,13 +160,11 @@ gstunnel在工作目录下自动生成日志文件，日志文件记录gstunnel�
 ---------------------------------------------
 This is a secure network tunnel.
 
-note:
-It is recommended to use the project source code of version 2.7 or higher.
-The source code of version lower than 2.7 has serious security vulnerabilities.
+Note: It is recommended to use the project source code of version 2.7 or higher. The source code lower than 2.7 has serious security vulnerabilities.
 
 [Introduction of gstunnel]
 
-gstunnel is a high-performance, high-concurrency cross-platform lightweight security network encryption pipeline developed based on the go language, supporting the tcp protocol.
+gstunnel is a high-performance, high-concurrency cross-platform lightweight security network encryption pipeline developed based on the go language, and it supports the tcp protocol.
 
 The project adopts multi-coroutine and lock-free mode to ensure the high performance and high concurrency of gstunnel.
 
@@ -186,29 +184,27 @@ The dynamic key mechanism will bring a slight performance loss (less than 5%). F
 
 In order to ensure higher security, the project uses a strong random number generator based on hardware.
 
+For better performance, use protobuf as the serialization format. (Version 3.8.1 and earlier use json as the serialization format. After using the protobuf format, the performance is 4 times that of the json version.)
+
 It is not recommended to use gstunnel as a complete substitute for VPN (openvpn, ipsec, etc.).
 
-Gstunnel is just a lightweight network encryption pipeline, which only provides limited security. The security is lower than mainstream VPN products such as openvpn and ipsec, and cannot replace mainstream VPNs.
+Gstunnel is just a lightweight network encryption pipeline, which only provides limited security. The security is lower than that of mainstream VPN products such as openvpn and ipsec, and cannot replace mainstream VPNs.
 
-Compared with traditional VPN, gstunnel also has some security advantages.
-gstunnel is just an ordinary user-mode program and does not require a dedicated vpn driver (usually a kernel-mode driver with the highest authority). Therefore, even if gstunnel has serious security vulnerabilities, under normal circumstances, it will not endanger the security of the entire operating system.
-The dynamic key of gstunnel has better security than the static key used by traditional VPN.
+Compared with traditional VPN, gstunnel also has some security advantages. gstunnel is just an ordinary user-mode program and does not require a dedicated vpn driver (usually a kernel-mode driver with the highest authority). Therefore, even if gstunnel has serious security vulnerabilities, under normal circumstances, it will not endanger the security of the entire operating system. The dynamic key of gstunnel has better security than the static key used by traditional VPN.
 
 The gstunnel encrypted tunnel can be a long connection or a short connection, and the specific performance depends on the connection characteristics of the carried service. If the business connection is a long connection, the encrypted tunnel will also remain a long connection. If the business connection is a short connection, the encrypted tunnel will be a short connection.
 
-A business connection of the gstunnel client, in the mt mode, will produce 4 business coroutines; in the non-mt mode, will produce 2 business coroutines.
+An encrypted tunnel connection of the gstunnel client, in the mt mode, will generate 4 processing goroutines; in the non-mt mode, it will generate 2 processing goroutines.
 
-A service connection of the gstunnel client corresponds to a separate and exclusive encryption key, and each service connection uses a different encryption key.
-If the gstunnel client has 10 business connections, there will be ten different encryption keys, and each encryption key is responsible for the encryption and decryption of a business connection.
+An encrypted tunnel connection of the gstunnel client corresponds to a separate and exclusive encryption key, and each encrypted tunnel connection uses a different encryption key. If the gstunnel client has 10 encrypted tunnel connections, there will be ten different encryption keys, and each encryption key is solely responsible for the encryption and decryption of an encrypted tunnel connection.
 
-Supported platforms:
-windows, linux, mac os
+Supported platforms: windows, linux, mac os
 
 Supported applications:
 
 HTTP proxy (squid3, etc.), email, socks 5 proxy and other applications developed based on tcp.
 
-Note: There are some bugs in the project, which have not been fixed yet. These bugs do not affect normal use.
+Note: There are some bugs in the project, which have not been fixed for the time being. These bugs do not affect normal use.
 
 gstunnel is divided into two parts: client and server.
 
@@ -226,11 +222,11 @@ a-->gstunnel client -->gstunnel server -->b
 
 gstunnel provides an encryption layer for the network communication between a and b.
 
-Make the communication data of a and b become encrypted data, so that the third party cannot know the communication content of a and b. So as to ensure the security of a and b network communication.
+Make the communication data of a and b become encrypted data, so that the third party cannot know the communication content of a and b. So as to ensure the safety of a and b network communication.
 
 Instructions:
 
-It can be installed via the "go get" tool.
+It can be installed through the "go get" tool.
 
 Or after downloading the project source code, copy it to the "$GOPATH\src" directory.
 
@@ -242,15 +238,11 @@ Use the command line tool to compile or install the project source code.
 
 At this time you get two executable files gstunnel_client and gstunnel_server.
 
-If there is a problem in compiling the source code, please try to enter the command "set GO111MODULE=off" to turn off the go module function.
+3.8.1 and earlier versions, if there is a problem in compiling the source code, please try to enter the command "set GO111MODULE=off" to turn off the go module function.
 
 Configuration parameter
 
-Executable file, accepts command line-based parameter input (not recommended) and configuration file (json)-based parameter settings.
-It is recommended to use a configuration file (json) to configure the parameters.
-The configuration file name of the client: config.client.json
-The configuration file name of the server: config.server.json
-Configuration file parameters:
+Executable file, accepts command line-based parameter input (not recommended) and configuration file (json)-based parameter settings. It is recommended to use a configuration file (json) to configure the parameters. The configuration file name of the client: config.client.json The configuration file name of the server: config.server.json Configuration file parameters:
 ```
 type GsConfig struct {
 Listen string
@@ -265,12 +257,12 @@ Mt_model bool
 ```
 Required parameters
 listen: listening address (string)
-server: destination address (string)
-key: aes encryption key (string array)
+servers: target address (string array)
+key: aes encryption key (string)
 
 Optional parameters
 debug: whether to enable debug mode (true or false)
-Tmr_display_time sets the interval time (in seconds) of information output to the standard output stream
+Tmr_display_time Set the interval time (in seconds) of information output to the standard output stream
 Tmr_changekey_time Set how long it takes for the dynamic key to be changed (unit: second)
 Mt_model Whether to enable multi-coroutine mode in the main logic module (true or false)
 ```
@@ -307,8 +299,7 @@ C:> ./gstunnel_server.exe 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
 
 Log
 
-gstunnel automatically generates a log file in the working directory, and the log file records error messages generated when gstunnel is running.
-The log file names are gstunnel_client.err.log, gstunnel_server.err.log.
+gstunnel automatically generates a log file in the working directory, and the log file records error messages generated when gstunnel is running. The log file names are gstunnel_client.err.log, gstunnel_server.err.log.
 
 Project address: https://github.com/ypcd/gstunnel
 
