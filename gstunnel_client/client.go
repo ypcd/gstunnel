@@ -82,6 +82,9 @@ func init() {
 	fmt.Println("tmr_changekey_time:", tmr_changekey_time)
 	Logger.Println("tmr_changekey_time:", tmr_changekey_time)
 
+	fmt.Println("info_protobuf:", gstunnellib.Info_protobuf)
+	Logger.Println("info_protobuf:", gstunnellib.Info_protobuf)
+
 	if debug_client {
 		go func() {
 			Logger.Fatalln("http server: ", http.ListenAndServe("localhost:6060", nil))
@@ -182,7 +185,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	}()
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
-	tmrP := timerm.CreateTimer(tmr_display_time)
+	//tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
 	tmr_changekey := timerm.CreateTimer(tmr_changekey_time)
@@ -282,9 +285,6 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		//fmt.Println("---rlen:", rlen)
 
 		rlent = rlent + rlen
-		if tmrP.Run() {
-			fmt.Fprintf(os.Stdout, "%d read end...\n", rlen)
-		}
 
 		if tmr_out.Run() {
 			return
@@ -385,7 +385,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	}()
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
-	tmrP := timerm.CreateTimer(tmr_display_time)
+	//tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
 	tmr_changekey := timerm.CreateTimer(tmr_changekey_time)
@@ -491,9 +491,6 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		//fmt.Println("---rlen:", rlen)
 
 		rlent = rlent + uint64(rlen)
-		if tmrP.Run() {
-			fmt.Fprintf(os.Stdout, "%d read end...\n", rlen)
-		}
 
 		if tmr_out.Run() {
 			return
@@ -667,7 +664,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	}()
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
-	tmrP := timerm.CreateTimer(tmr_display_time)
+	//tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
 	//tmr_changekey := timerm.CreateTimer(time.Minute * 10)
@@ -715,12 +712,6 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 		rlent = rlent + rlen
 		//rlen = 0
-
-		if tmrP.Run() {
-			fmt.Fprintf(os.Stdout, "%d read end...\n", rlen)
-			x1 := 1
-			x1++
-		}
 
 		if tmr_out.Run() {
 			return
@@ -809,7 +800,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	}()
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
-	tmrP := timerm.CreateTimer(tmr_display_time)
+	//tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
 	//tmr_changekey := timerm.CreateTimer(time.Minute * 10)
@@ -864,10 +855,6 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 
 		rlent = rlent + int64(rlen)
 		//rlen = 0
-
-		if tmrP.Run() {
-			fmt.Fprintf(os.Stdout, "%d read end...\n", rlen)
-		}
 
 		if tmr_out.Run() {
 			return

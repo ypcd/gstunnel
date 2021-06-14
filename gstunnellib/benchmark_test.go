@@ -50,3 +50,56 @@ func Benchmark_bytesjoin_gen(b *testing.B) {
 		po1.GetSha256()
 	}
 }
+
+func Benchmark_json_po1(b *testing.B) {
+	ap1 := CreateAesPack("1234567890123456")
+	blen := 0
+	for i := 0; i < b.N; i++ {
+		re := jsonPacking_OperGen_po1([]byte{})
+		cdata := ap1.compress(re)
+		_ = cdata
+		if blen == 0 {
+			blen = len(cdata)
+		}
+	}
+	b.Log(blen)
+}
+
+func Benchmark_json_proto(b *testing.B) {
+	blen := 0
+	for i := 0; i < b.N; i++ {
+		re := jsonPacking_OperGen([]byte{})
+		if blen == 0 {
+			blen = len(re)
+		}
+	}
+	b.Log(blen)
+}
+
+func Benchmark_json_po1_inbytes(b *testing.B) {
+	ap1 := CreateAesPack("1234567890123456")
+	blen := 0
+	data1 := GetRDCBytes(1024 * 2)
+	for i := 0; i < b.N; i++ {
+		re := jsonPacking_OperGen_po1(data1)
+		cdata := ap1.compress(re)
+		_ = cdata
+		if blen == 0 {
+			blen = len(cdata)
+		}
+	}
+	b.Log(blen)
+}
+
+func Benchmark_json_proto_inbytes(b *testing.B) {
+	blen := 0
+	data1 := GetRDCBytes(1024 * 2)
+
+	for i := 0; i < b.N; i++ {
+		re := jsonPacking_OperGen(data1)
+		if blen == 0 {
+			blen = len(re)
+		}
+	}
+	b.Log(blen)
+}

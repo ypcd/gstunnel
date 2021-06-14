@@ -134,6 +134,7 @@ func Test_find0(t *testing.T) {
 	} else {
 		t.Error("error.")
 	}
+
 }
 
 /*
@@ -312,6 +313,7 @@ func Test_binConv(t *testing.T) {
 	p(&buf, buf)
 }
 
+/*
 func Test_IsChangeCryKey(t *testing.T) {
 	pgen := CreatePackOperGen([]byte{})
 	pckey := CreatePackOperChangeKey()
@@ -323,7 +325,7 @@ func Test_IsChangeCryKey(t *testing.T) {
 		t.Error("error.")
 	}
 }
-
+*/
 func Test_GetRDF64(t *testing.T) {
 
 	f1 := GetRDF64()
@@ -373,6 +375,7 @@ func Test_jsonPacking_OperGen(t *testing.T) {
 		t.Error("Error.")
 	}
 	_ = p1
+
 }
 
 func Test_Aespack_changeCryKey(t *testing.T) {
@@ -476,6 +479,7 @@ func Test_GetRDCBytes(t *testing.T) {
 	} else {
 		t.Error()
 	}
+
 }
 
 func Test_poversion(t *testing.T) {
@@ -656,6 +660,7 @@ func Test_compress(t *testing.T) {
 	}
 
 	fmt.Println()
+
 }
 
 func Test_compress_un(t *testing.T) {
@@ -692,6 +697,7 @@ func Test_compress_un(t *testing.T) {
 	} else {
 		t.Log("Error.")
 	}
+
 }
 
 func Test_compress_un2(t *testing.T) {
@@ -728,6 +734,7 @@ func Test_compress_un2(t *testing.T) {
 	} else {
 		t.Log("Error.")
 	}
+
 }
 
 func Test_pack_type_size(t *testing.T) {
