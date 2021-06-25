@@ -120,11 +120,11 @@ Mt_model           	是否在主逻辑模块开启多协程模式（true或false
 ```
 配置文件示例：
 
-{"listen": "127.0.0.1:33128", "server": ["127.0.0.1:10036"], "key": "1234567890123456"}
+{"listen": "127.0.0.1:33128", "servers": ["127.0.0.1:10036"], "key": "1234567890123456"}
 
-listen:	监听地址
-server:	目标地址
-key:	aes加密密钥
+listen:		监听地址
+servers:	目标地址
+key:		aes加密密钥
 ```
 命令行格式:
 
@@ -269,10 +269,10 @@ Mt_model Whether to enable multi-coroutine mode in the main logic module (true o
 ```
 Example configuration file:
 
-{"listen": "127.0.0.1:33128", "server": ["127.0.0.1:10036"], "key": "1234567890123456"}
+{"listen": "127.0.0.1:33128", "servers": ["127.0.0.1:10036"], "key": "1234567890123456"}
 
 listen: listening address
-server: destination address
+servers: destination address
 key: aes encryption key
 ```
 Command line format:
