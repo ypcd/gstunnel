@@ -31,7 +31,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const Version string = "V4.0"
+const Version string = "V4.3"
 
 var p func(...interface{}) (int, error)
 

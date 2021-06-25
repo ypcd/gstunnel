@@ -199,15 +199,19 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	fp2 := "CPsend.data"
 
 	fp1, fp2 = fpnull, fpnull
+	_, _ = fp1, fp2
 
-	outf, err := os.Create(fp1)
-	checkError(err)
+	var err error
+	_ = err
+	//outf, err := os.Create(fp1)
+	//checkError(err)
 
-	outf2, err := os.Create(fp2)
-	checkError(err)
+	//outf2, err := os.Create(fp2)
+	//checkError(err)
 	defer src.Close()
 	defer dst.Close()
-	defer outf.Close()
+	//defer outf.Close()
+	//defer outf2.Close()
 	buf := make([]byte, net_read_size)
 	var rbuf []byte
 	var wbuf bytes.Buffer
@@ -230,7 +234,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		buf := apack.IsTheVersionConsistent()
 		//tmr.Boot()
 		//ChangeCryKey_Total += 1
-		outf2.Write(buf)
+		//outf2.Write(buf)
 		for {
 			if len(buf) > 0 {
 				wlen, err := dst.Write(buf)
@@ -255,7 +259,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		buf := apack.ChangeCryKey()
 		//tmr.Boot()
 		ChangeCryKey_Total += 1
-		outf2.Write(buf)
+		//outf2.Write(buf)
 		for {
 			if len(buf) > 0 {
 				wlen, err := dst.Write(buf)
@@ -296,7 +300,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 			continue
 		}
 
-		outf.Write(buf[:rlen])
+		//outf.Write(buf[:rlen])
 		tmr_out.Boot()
 		rbuf = buf
 		buf = buf[:rlen]
@@ -308,7 +312,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		if wbuf.Len() > 0 {
 			buf = apack.Packing(wbuf.Bytes())
 			//wbuf = wbuf[len(wbuf):]
-			outf2.Write(buf)
+			//outf2.Write(buf)
 			for {
 				if len(buf) > 0 {
 					recot_p_w.Run()
@@ -337,7 +341,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 			buf := apack.ChangeCryKey()
 			ChangeCryKey_Total += 1
 			tmr_out.Boot()
-			outf2.Write(buf)
+			//outf2.Write(buf)
 			for {
 				if len(buf) > 0 {
 
@@ -398,15 +402,19 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	fp2 := "CPsend.data"
 
 	fp1, fp2 = fpnull, fpnull
+	_, _ = fp1, fp2
 
-	outf, err := os.Create(fp1)
-	checkError(err)
+	var err error
+	_ = err
+	//outf, err := os.Create(fp1)
+	//checkError(err)
 
-	outf2, err := os.Create(fp2)
-	checkError(err)
+	//outf2, err := os.Create(fp2)
+	//checkError(err)
 	defer src.Close()
 	//defer dst.Close()
-	defer outf.Close()
+	//defer outf.Close()
+	//defer outf2.Close()
 	buf := make([]byte, net_read_size)
 	//var rbuf []byte
 	//var wbuf bytes.Buffer
@@ -433,7 +441,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		buf := apack.IsTheVersionConsistent()
 		//tmr.Boot()
 		//ChangeCryKey_Total += 1
-		outf2.Write(buf)
+		//outf2.Write(buf)
 		for {
 			if len(buf) > 0 {
 				wlen, err := dst.Write(buf)
@@ -458,7 +466,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		buf := apack.ChangeCryKey()
 		//tmr.Boot()
 		ChangeCryKey_Total += 1
-		outf2.Write(buf)
+		//outf2.Write(buf)
 		for {
 			if len(buf) > 0 {
 				wlen, err := dst.Write(buf)
@@ -502,7 +510,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 			continue
 		}
 
-		outf.Write(buf[:rlen])
+		//outf.Write(buf[:rlen])
 		tmr_out.Boot()
 		buf = buf[:rlen]
 
@@ -521,7 +529,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 			buf := apack.ChangeCryKey()
 			ChangeCryKey_Total += 1
 			tmr_out.Boot()
-			outf2.Write(buf)
+			//outf2.Write(buf)
 			dst_chan <- buf
 		}
 		if tmrP2.Run() {
@@ -557,13 +565,17 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 	fp2 := "CPsend.data"
 
 	fp1, fp2 = fpnull, fpnull
+	_, _ = fp1, fp2
 
-	outf, err := os.Create(fp1)
-	checkError(err)
-	outf2, err := os.Create(fp2)
-	checkError(err)
+	var err error
+	_ = err
+	//outf, err := os.Create(fp1)
+	//checkError(err)
+	//outf2, err := os.Create(fp2)
+	//checkError(err)
 	defer dst.Close()
-	defer outf.Close()
+	//defer outf.Close()
+	//defer outf2.Close()
 
 	//var buf []byte
 	//var wbuf bytes.Buffer
@@ -606,7 +618,7 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 		if len(buf) > 0 {
 
 			//wbuf = wbuf[len(wbuf):]
-			outf2.Write(buf)
+			//outf2.Write(buf)
 			for {
 				if len(buf) > 0 {
 					recot_p_w.Run()
@@ -678,15 +690,19 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	fp2 := "SUsend.data"
 	fp1 = fpnull
 	fp2 = fpnull
-	outf, err := os.Create(fp1)
-	checkError(err)
+	_, _ = fp1, fp2
 
-	outf2, err := os.Create(fp2)
-	checkError(err)
+	var err error
+	_ = err
+	//outf, err := os.Create(fp1)
+	//checkError(err)
+
+	//outf2, err := os.Create(fp2)
+	//checkError(err)
 	defer src.Close()
 	defer dst.Close()
-	defer outf.Close()
-	defer outf2.Close()
+	//defer outf.Close()
+	//defer outf2.Close()
 	buf := make([]byte, net_read_size)
 	var rbuf, wbuf []byte
 	//var wbuff bytes.Buffer
@@ -723,7 +739,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 			continue
 		}
 
-		outf.Write(buf[:rlen])
+		//outf.Write(buf[:rlen])
 		tmr_out.Boot()
 		rbuf = buf
 		buf = buf[:rlen]
@@ -748,7 +764,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 					return
 				}
 				pf("buf unpack:%d\n", len(buf))
-				outf2.Write(buf)
+				//outf2.Write(buf)
 				for {
 					if len(buf) > 0 {
 						recot_un_w.Run()
@@ -814,15 +830,19 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	fp2 := "SUsend.data"
 	fp1 = fpnull
 	fp2 = fpnull
-	outf, err := os.Create(fp1)
-	checkError(err)
+	_, _ = fp1, fp2
 
-	outf2, err := os.Create(fp2)
-	checkError(err)
+	var err error
+	_ = err
+	//outf, err := os.Create(fp1)
+	//checkError(err)
+
+	//outf2, err := os.Create(fp2)
+	//checkError(err)
 	defer src.Close()
 	defer dst.Close()
-	defer outf.Close()
-	defer outf2.Close()
+	//defer outf.Close()
+	//defer outf2.Close()
 	buf := make([]byte, net_read_size)
 	//var rbuf []byte
 	//var wbuff bytes.Buffer
@@ -866,7 +886,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 			continue
 		}
 
-		outf.Write(buf[:rlen])
+		//outf.Write(buf[:rlen])
 		tmr_out.Boot()
 		//rbuf = buf
 		buf = buf[:rlen]
@@ -910,15 +930,20 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 	fp2 := "SUsend.data"
 	fp1 = fpnull
 	fp2 = fpnull
-	outf, err := os.Create(fp1)
-	checkError(err)
 
-	outf2, err := os.Create(fp2)
-	checkError(err)
+	_, _ = fp1, fp2
+
+	var err error
+	_ = err
+	//outf, err := os.Create(fp1)
+	//checkError(err)
+
+	//outf2, err := os.Create(fp2)
+	//checkError(err)
 
 	defer dst.Close()
-	defer outf.Close()
-	defer outf2.Close()
+	//defer outf.Close()
+	//defer outf2.Close()
 
 	//buf := make([]byte, net_read_size)
 	var wbuf []byte
@@ -970,7 +995,7 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 					return
 				}
 				pf("buf unpack:%d\n", len(buf))
-				outf2.Write(buf)
+				//outf2.Write(buf)
 				for {
 					if len(buf) > 0 {
 						recot_un_w.Run()
