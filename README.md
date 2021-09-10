@@ -1,3 +1,9 @@
+
+![image](https://github.com/ypcd/gstunnel/blob/master/img/gstunnel%20flow%20Diagram.png)
+
+![image](https://github.com/ypcd/gstunnel/blob/master/img/gstunnel%20Class%20Diagram.png)
+
+
 This is a secure network tunnel.
 
 注意：
