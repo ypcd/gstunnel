@@ -133,8 +133,15 @@ func run() {
 		if err != nil {
 			continue
 		}
-
+		server_conn_error_total := 0
+		tmr := timerm.CreateTimer(time.Second * 10)
 		for {
+			if tmr.Run() {
+				Logger.Println("Error: server_conn_error_total: ", server_conn_error_total)
+				server_conn_error_total = 0
+				tmr.Boot()
+
+			}
 			//service := gsconfig.GetServer_rand()
 			service := gsconfig.GetServers()[0]
 			//tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
@@ -144,7 +151,14 @@ func run() {
 			dst, err := net.Dial("tcp", service)
 			//checkError(err)
 			if err != nil {
-				Logger.Println("Error [net.Dial('tcp', service)]:", err.Error())
+				if server_conn_error_total > 10000 {
+					fmt.Fprintln(os.Stderr, "Error: [net.Dial('tcp', service)]:", err.Error())
+					Logger.Fatalln("Error: server_conn_error_total > 10000")
+				}
+				server_conn_error_total++
+				Logger.Println("Error: [net.Dial('tcp', service)]:", err.Error())
+				fmt.Fprintln(os.Stderr, "Error: [net.Dial('tcp', service)]:", err.Error())
+
 				continue
 			}
 			fmt.Println("conn.", service)
