@@ -135,7 +135,8 @@ func run() {
 		}
 
 		for {
-			service := gsconfig.GetServer()
+			//service := gsconfig.GetServer_rand()
+			service := gsconfig.GetServers()[0]
 			//tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 			//_ = tcpAddr
 			//fmt.Println(tcpAddr)
@@ -143,6 +144,7 @@ func run() {
 			dst, err := net.Dial("tcp", service)
 			//checkError(err)
 			if err != nil {
+				Logger.Println("Error [net.Dial('tcp', service)]:", err.Error())
 				continue
 			}
 			fmt.Println("conn.", service)
@@ -173,13 +175,21 @@ func srcTOdstUn_count(src net.Conn, dst net.Conn) {
 	atomic.AddInt32(&goUnpackTotal, -1)
 }
 
+func IsTheVersionConsistent_send(dst net.Conn, apack gstunnellib.GsPack, wlent *int64) error {
+	return gstunnellib.IsTheVersionConsistent_sendEx(dst, apack, wlent, nil)
+}
+
+func ChangeCryKey_send(dst net.Conn, apack gstunnellib.GsPack, ChangeCryKey_Total *int, wlent *int64) error {
+	return gstunnellib.ChangeCryKey_sendEX(dst, apack, ChangeCryKey_Total, wlent, nil)
+}
+
 func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		if x := recover(); x != nil {
 			fmt.Println("Go exit.")
 			err := fmt.Errorf("Error:%s", x)
 			fmt.Println(err)
-			Logger.Println(x, "  Go exit.")
+			Logger.Println(x, "\t\tGo exit.")
 
 		}
 	}()
@@ -193,7 +203,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	recot_p_r := timerm.CreateRecoTime()
 	recot_p_w := timerm.CreateRecoTime()
 
-	apack := gstunnellib.CreateAesPack(key)
+	apack := gstunnellib.NewGsPack(key)
 
 	fp1 := "CPrecv.data"
 	fp2 := "CPsend.data"
@@ -216,7 +226,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	var rbuf []byte
 	var wbuf bytes.Buffer
 
-	wlent, rlent := 0, 0
+	var wlent, rlent int64 = 0, 0
 
 	ChangeCryKey_Total := 0
 
@@ -230,56 +240,14 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 	}()
 
-	if true {
-		buf := apack.IsTheVersionConsistent()
-		//tmr.Boot()
-		//ChangeCryKey_Total += 1
-		//outf2.Write(buf)
-		for {
-			if len(buf) > 0 {
-				wlen, err := dst.Write(buf)
-				wlent = wlent + wlen
-				if wlen == 0 {
-					return
-				}
-				if err != nil && wlen <= 0 {
-					continue
-				}
-				if len(buf) == wlen {
-					break
-				}
-				buf = buf[wlen:]
-			} else {
-				break
-			}
-		}
+	err = IsTheVersionConsistent_send(dst, apack, &wlent)
+	if err != nil {
+		return
 	}
-
-	if true {
-		buf := apack.ChangeCryKey()
-		//tmr.Boot()
-		ChangeCryKey_Total += 1
-		//outf2.Write(buf)
-		for {
-			if len(buf) > 0 {
-				wlen, err := dst.Write(buf)
-				wlent = wlent + wlen
-				if wlen == 0 {
-					return
-				}
-				if err != nil && wlen <= 0 {
-					continue
-				}
-				if len(buf) == wlen {
-					break
-				}
-				buf = buf[wlen:]
-			} else {
-				break
-			}
-		}
+	err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
+	if err != nil {
+		return
 	}
-
 	for {
 
 		recot_p_r.Run()
@@ -288,7 +256,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		//recot_p_r.RunDisplay("---recot_p_r:")
 		//fmt.Println("---rlen:", rlen)
 
-		rlent = rlent + rlen
+		rlent = rlent + int64(rlen)
 
 		if tmr_out.Run() {
 			return
@@ -321,7 +289,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 					//recot_p_w.RunDisplay("---recot_p_w:")
 					//fmt.Println("---wlen:", wlen)
 
-					wlent = wlent + wlen
+					wlent = wlent + int64(wlen)
 					if wlen == 0 {
 						return
 					}
@@ -338,29 +306,9 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 			}
 		}
 		if tmr_changekey.Run() {
-			buf := apack.ChangeCryKey()
-			ChangeCryKey_Total += 1
-			tmr_out.Boot()
-			//outf2.Write(buf)
-			for {
-				if len(buf) > 0 {
-
-					wlen, err := dst.Write(buf)
-
-					wlent = wlent + wlen
-					if wlen == 0 {
-						return
-					}
-					if err != nil && wlen <= 0 {
-						continue
-					}
-					if len(buf) == wlen {
-						break
-					}
-					buf = buf[wlen:]
-				} else {
-					break
-				}
+			err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
+			if err != nil {
+				return
 			}
 		}
 		buf = rbuf
@@ -396,7 +344,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 	recot_p_r := timerm.CreateRecoTime()
 
-	apack := gstunnellib.CreateAesPack(key)
+	apack := gstunnellib.NewGsPack(key)
 
 	fp1 := "CPrecv.data"
 	fp2 := "CPsend.data"
@@ -419,7 +367,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	//var rbuf []byte
 	//var wbuf bytes.Buffer
 
-	var wlent, rlent uint64 = 0, 0
+	var wlent, rlent int64 = 0, 0
 
 	ChangeCryKey_Total := 0
 
@@ -437,54 +385,13 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		fmt.Println("\tRecoTime_p_r All: ", recot_p_r.StringAll())
 	}()
 
-	if true {
-		buf := apack.IsTheVersionConsistent()
-		//tmr.Boot()
-		//ChangeCryKey_Total += 1
-		//outf2.Write(buf)
-		for {
-			if len(buf) > 0 {
-				wlen, err := dst.Write(buf)
-				wlent = wlent + uint64(wlen)
-				if wlen == 0 {
-					return
-				}
-				if err != nil && wlen <= 0 {
-					continue
-				}
-				if len(buf) == wlen {
-					break
-				}
-				buf = buf[wlen:]
-			} else {
-				break
-			}
-		}
+	err = IsTheVersionConsistent_send(dst, apack, &wlent)
+	if err != nil {
+		return
 	}
-
-	if true {
-		buf := apack.ChangeCryKey()
-		//tmr.Boot()
-		ChangeCryKey_Total += 1
-		//outf2.Write(buf)
-		for {
-			if len(buf) > 0 {
-				wlen, err := dst.Write(buf)
-				wlent = wlent + uint64(wlen)
-				if wlen == 0 {
-					return
-				}
-				if err != nil && wlen <= 0 {
-					continue
-				}
-				if len(buf) == wlen {
-					break
-				}
-				buf = buf[wlen:]
-			} else {
-				break
-			}
-		}
+	err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
+	if err != nil {
+		return
 	}
 
 	go srcTOdstP_w(dst, dst_chan, dst_ok, wlent)
@@ -498,7 +405,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		//recot_p_r.RunDisplay("---recot_p_r:")
 		//fmt.Println("---rlen:", rlen)
 
-		rlent = rlent + uint64(rlen)
+		rlent = rlent + int64(rlen)
 
 		if tmr_out.Run() {
 			return
@@ -544,7 +451,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	}
 }
 
-func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status, wlentotal uint64) {
+func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status, wlentotal int64) {
 	defer func() {
 		if x := recover(); x != nil {
 			fmt.Println("Go exit.")
@@ -580,7 +487,7 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 	//var buf []byte
 	//var wbuf bytes.Buffer
 
-	var wlent uint64 = wlentotal
+	var wlent int64 = wlentotal
 
 	ChangeCryKey_Total := 0
 
@@ -625,7 +532,7 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 					wlen, err := dst.Write(buf)
 					recot_p_w.Run()
 
-					wlent = wlent + uint64(wlen)
+					wlent = wlent + int64(wlen)
 
 					tmr_out.Boot()
 					if wlen == 0 {
@@ -668,6 +575,9 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 }
 
 func srcTOdstUn_st(src net.Conn, dst net.Conn) {
+	defer src.Close()
+	defer dst.Close()
+
 	defer func() {
 		if x := recover(); x != nil {
 			fmt.Println("Go exit.")
@@ -684,7 +594,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	recot_un_r := timerm.CreateRecoTime()
 	recot_un_w := timerm.CreateRecoTime()
 
-	apack := gstunnellib.CreateAesPack(key)
+	apack := gstunnellib.NewGsPack(key)
 
 	fp1 := "SUrecv.data"
 	fp2 := "SUsend.data"
@@ -699,8 +609,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 	//outf2, err := os.Create(fp2)
 	//checkError(err)
-	defer src.Close()
-	defer dst.Close()
+
 	//defer outf.Close()
 	//defer outf2.Close()
 	buf := make([]byte, net_read_size)
@@ -759,7 +668,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 				pf("buf not unpack:%d\n", len(buf))
 				buf, err = apack.Unpack(buf)
 				if err != nil {
-					fmt.Fprintf(os.Stdout, "Error: %s", err.Error())
+					fmt.Fprintf(os.Stderr, "Error: %s", err.Error())
 					Logger.Println(err.Error())
 					return
 				}
@@ -824,7 +733,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	recot_un_r := timerm.CreateRecoTime()
 	//recot_un_w := timerm.CreateRecoTime()
 
-	//apack := gstunnellib.CreateAesPack(key)
+	//apack := gstunnellib.NewGsPack(key)
 
 	fp1 := "SUrecv.data"
 	fp2 := "SUsend.data"
@@ -924,7 +833,7 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 
 	recot_un_w := timerm.CreateRecoTime()
 
-	apack := gstunnellib.CreateAesPack(key)
+	apack := gstunnellib.NewGsPack(key)
 
 	fp1 := "SUrecv.data"
 	fp2 := "SUsend.data"
@@ -990,7 +899,7 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 				pf("buf not unpack:%d\n", len(buf))
 				buf, err = apack.Unpack(buf)
 				if err != nil {
-					fmt.Fprintf(os.Stdout, "Error: %s", err.Error())
+					fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error())
 					Logger.Println(err.Error())
 					return
 				}
