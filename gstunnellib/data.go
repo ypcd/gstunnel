@@ -11,27 +11,23 @@ import (
 	"compress/flate"
 	"crypto/aes"
 	"crypto/cipher"
-	randc "crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
-	"math"
-	"math/big"
 	"os"
 	"sync"
-	"sync/atomic"
 
 	"google.golang.org/protobuf/proto"
 )
 
-const Version string = "V4.3"
+const Version string = "V4.5.6"
+
+//var Version string = "V4.5.3"
 
 var p func(...interface{}) (int, error)
 
@@ -41,7 +37,20 @@ var debug_tag bool
 
 var commonIV = []byte{171, 158, 1, 73, 31, 98, 64, 85, 209, 217, 131, 150, 104, 219, 33, 220}
 
-var Logger *log.Logger
+/*
+type Gst_logger struct {
+	*log.logger
+}
+
+func (plog *Gst_logger) Println(v ...interface{}) {
+	plog.logger.Println(v...)
+	_, _ = fmt.Println(v...)
+}
+
+var logger *Gst_logger
+*/
+
+var logger *log.Logger
 
 var bufPool = sync.Pool{
 	New: func() interface{} {
@@ -61,83 +70,24 @@ func init() {
 	debug_tag = false
 	p = Nullprint
 
+	logger = CreateFileLogger("gstunnellib.data.log")
 	//debug_tag = true
 	//p = fmt.Println
 }
+
 func CheckError(err error) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-		Logger.Fatalln(err.Error())
-		//os.Exit(-11)
+		logger.Fatalln("Fatal error:", err.Error())
 	}
 }
 
 func CreateFileLogger(FileName string) *log.Logger {
 	lf, err := os.Create(FileName)
 	CheckError(err)
-	Logger = log.New(lf, "Error: ", log.Lshortfile|log.LstdFlags|log.Lmsgprefix)
-	return Logger
-}
 
-type GsConfig_1 struct {
-	Listen             string
-	Server             string
-	Key                string
-	Debug              bool
-	Tmr_display_time   int
-	Tmr_changekey_time int
-	Mt_model           bool
-}
-
-type GsConfig struct {
-	Listen             string
-	Servers            []string
-	Key                string
-	Debug              bool
-	Tmr_display_time   int
-	Tmr_changekey_time int
-	Mt_model           bool
-}
-
-func (gs *GsConfig) GetServer() string {
-	return gs.Servers[GetRDCInt_max(int64(len(gs.Servers)))]
-}
-func (gs *GsConfig) GetServers() []string {
-	return gs.Servers
-}
-
-func CreateGsconfig(confn string) *GsConfig {
-	f, err := os.Open(confn)
-	CheckError(err)
-
-	defer func() {
-		f.Close()
-	}()
-
-	buf, err := ioutil.ReadAll(f)
-	CheckError(err)
-
-	//fmt.Println(string(buf))
-	var gsconfig GsConfig
-
-	gsconfig.Debug = false
-	gsconfig.Tmr_display_time = 5
-	gsconfig.Tmr_changekey_time = 60
-	gsconfig.Mt_model = true
-
-	json.Unmarshal(buf, &gsconfig)
-	/*
-		if gsconfig.Tmr_display_time == 0 {
-			gsconfig.Tmr_display_time = 5
-		}
-		if gsconfig.Tmr_changekey_time == 0 {
-			gsconfig.Tmr_changekey_time = 60
-		}
-	*/
-	if gsconfig.Servers == nil {
-		Logger.Fatalln("gsconfig.Servers==nil")
-	}
-	return &gsconfig
+	logger = log.New(lf, "", log.Lshortfile|log.LstdFlags|log.Lmsgprefix)
+	return logger
 }
 
 type Pack struct {
@@ -165,12 +115,45 @@ const (
 )
 
 type packOper_1 struct {
-	OperType uint8
+	OperType uint32
 	OperData []byte
 	Data     []byte
-	Rand     int64
-	HashHex  string
-	//HashHex [32]byte
+	Rand     []byte //[8]byte
+	//HashHex  string
+	HashHex []byte //[32]byte
+}
+
+func (po *packOper_1) IsOk() error {
+	p1 := po
+	if p1.OperType < POBegin || p1.OperType > POEnd {
+		return errors.New("PackOper OperType is error.")
+	}
+
+	h1 := p1.GetSha256()
+
+	if bytes.Equal(p1.HashHex, h1) {
+		return nil
+	} else {
+		return errors.New("The packoper hash is inconsistent.")
+	}
+}
+
+func (po *packOper_1) GetSha256_buf() [32]byte {
+
+	var buf bytes.Buffer
+	buf.Write(Intu8ToBytes(uint8(po.OperType)))
+	buf.Write(po.OperData)
+	buf.Write(po.Data)
+	buf.Write([]byte(po.Rand))
+
+	return GetSha256_32bytes(buf.Bytes())
+
+}
+
+func (po *packOper_1) GetSha256() []byte {
+	v1 := po.GetSha256_buf()
+	//return hex.EncodeToString(v1[:])
+	return v1[:]
 }
 
 /*
@@ -199,10 +182,11 @@ func GetSha256_32bytes(data []byte) [32]byte {
 	return sha256.Sum256(data)
 }
 
+/*
 func GetSha256_old_po1(po *packOper_1) string {
 	return GetSha256Hex(append(Intu8ToBytes(po.OperType), append(po.OperData, append(po.Data, Int64ToBytes(po.Rand)...)...)...))
 }
-
+*/
 func (po *packOper) GetSha256_old() [32]byte {
 	return GetSha256_32bytes(append(Intu8ToBytes(uint8(po.OperType)), append(po.OperData, append(po.Data, po.Rand...)...)...))
 }
@@ -234,7 +218,6 @@ func (po *packOper) GetSha256_pool() [32]byte {
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer bufPool.Put(buf)
 	buf.Reset()
-	//fmt.Println("CAP LEN:", buf.Cap(), buf.Len())
 
 	buf.Write(Intu8ToBytes(uint8(po.OperType)))
 	buf.Write(po.OperData)
@@ -274,64 +257,6 @@ func (po *packOper) IsPOGen() bool {
 	return po.OperType == POGenOper
 }
 
-func GetRDCInt_max(max int64) int64 {
-	rd, _ := randc.Int(randc.Reader,
-		big.NewInt(max))
-	return rd.Int64()
-}
-
-func GetRDCInt64() int64 {
-	rd, _ := randc.Int(randc.Reader,
-		big.NewInt(9223372036854775807))
-	return rd.Int64()
-}
-
-func GetRDCInt8() int8 {
-	rd, _ := randc.Int(randc.Reader,
-		big.NewInt(255))
-	return int8(rd.Int64())
-}
-
-func GetRDCbyte() byte {
-	rd, _ := randc.Int(randc.Reader,
-		big.NewInt(255))
-	return byte(rd.Int64())
-}
-
-func GetRDCBytes(byteLen int) []byte {
-	data := make([]byte, byteLen)
-	for i := 0; i < byteLen; i++ {
-		data[i] = GetRDCbyte()
-	}
-	return data
-}
-
-func GetRDF64() float64 {
-	//var rd_s rand.Source = rand.NewSource(time.Now().Unix())
-	//rnd := rand.New(rd_s)
-	return float64(GetRDCInt64()) / 9223372036854775807.0
-}
-
-func GetRDInt8() int8 {
-	return int8(GetRDF64() * 256)
-}
-
-func GetRDInt16() int16 {
-	return int16(GetRDF64() * math.Pow(2, 16))
-}
-
-func GetRDInt32() int32 {
-	return int32(GetRDF64() * math.Pow(2, 32))
-}
-
-func GetRDInt64() int64 {
-	return int64(GetRDF64() * math.Pow(2, 64))
-}
-
-func GetRDBytes(byteLen int) []byte {
-	return GetRDCBytes(byteLen)
-}
-
 func IsChangeCryKey(Data []byte) bool {
 	return (UnPack_Oper(Data).OperType == POChangeCryKey)
 }
@@ -348,61 +273,40 @@ func GetKey(Data []byte) []byte {
 	return (UnPack_Oper(Data).OperData)
 }
 
-func Intu8ToBytes(v uint8) []byte {
-	bbuf := new(bytes.Buffer)
-	err := binary.Write(bbuf, binary.LittleEndian, v)
-	if err != nil {
-		panic(err)
-	}
-	return bbuf.Bytes()
-}
-
-func Int32ToBytes(i32 int32) []byte {
-	bbuf := new(bytes.Buffer)
-	err := binary.Write(bbuf, binary.LittleEndian, i32)
-	if err != nil {
-		panic(err)
-	}
-	return bbuf.Bytes()
-}
-
-func Int64ToBytes(data int64) []byte {
-	bbuf := new(bytes.Buffer)
-	err := binary.Write(bbuf, binary.LittleEndian, data)
-	if err != nil {
-		panic(err)
-	}
-	return bbuf.Bytes()
-}
-
 func CreatePackOperGen_po1(data []byte) *packOper_1 {
 
-	rd := GetRDCInt64()
+	rd := GetRDCBytes(8)
 
 	pd := packOper_1{
-		OperType: uint8(POGenOper),
+		OperType: POGenOper,
 		//OperData: []byte(""),
 		Data: data,
 		Rand: rd,
 		//HashHex: nil,
 	}
 
-	pd.HashHex = GetSha256_old_po1(&pd)
+	pd.HashHex = pd.GetSha256()
 	return &pd
 }
 
 func CreatePackOperGen(data []byte) *packOper {
 
 	rd := GetRDCBytes(8)
+	/*
+		pop := PackOperPro{
+			OperType: POGenOper,
+			//OperData: []byte(""),
+			Data: data,
+			Rand: rd,
+		}
+	*/
 
-	pop := PackOperPro{
+	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POGenOper,
 		//OperData: []byte(""),
 		Data: data,
 		Rand: rd,
-	}
-
-	pd := packOper{PackOperPro: pop}
+	}}
 
 	pd.HashHex = pd.GetSha256()
 	return &pd
@@ -414,13 +318,11 @@ func CreatePackOperChangeKey() *packOper {
 
 	key := GetRDBytes(32)
 
-	pop := PackOperPro{
+	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POChangeCryKey,
 		OperData: []byte(key),
 		Rand:     rd,
-	}
-
-	pd := packOper{PackOperPro: pop}
+	}}
 
 	pd.HashHex = pd.GetSha256()
 	return &pd
@@ -430,13 +332,11 @@ func CreatePackOperVersion() *packOper {
 
 	rd := GetRDCBytes(8)
 
-	pop := PackOperPro{
+	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POVersion,
 		OperData: []byte(Version),
 		Rand:     rd,
-	}
-
-	pd := packOper{PackOperPro: pop}
+	}}
 
 	pd.HashHex = pd.GetSha256()
 
@@ -501,7 +401,7 @@ func jsonPacking_OperGen_po1(data []byte) []byte {
 
 func UnPack_Oper(data []byte) *packOper {
 	var msg packOper
-	var msg2 PackOperPro
+	//var msg2 PackOperPro
 	//ix, re := Find0(data)
 	/*if !re {
 		return &packOper{}
@@ -509,9 +409,30 @@ func UnPack_Oper(data []byte) *packOper {
 	*/
 	data2 := data
 
-	proto.Unmarshal(data2, &msg2)
+	proto.Unmarshal(data2, &msg.PackOperPro)
 
-	msg.PackOperPro = msg2
+	//msg.PackOperPro = msg2
+	if debug_tag {
+		p(msg)
+		p("json: ", string(data2))
+	}
+
+	return &msg
+}
+
+func UnPack_Oper_po1(data []byte) *packOper_1 {
+	var msg packOper_1
+	//var msg2 PackOperPro
+	//ix, re := Find0(data)
+	/*if !re {
+		return &packOper{}
+	}
+	*/
+	data2 := data
+
+	json.Unmarshal(data2, &msg)
+
+	//msg.PackOperPro = msg2
 	if debug_tag {
 		p(msg)
 		p("json: ", string(data2))
@@ -523,6 +444,13 @@ func UnPack_Oper(data []byte) *packOper {
 func jsonUnPack_OperGen(data []byte) ([]byte, error) {
 
 	p1 := UnPack_Oper(data)
+
+	return p1.Data[:], p1.IsOk()
+}
+
+func jsonUnPack_OperGen_po1(data []byte) ([]byte, error) {
+
+	p1 := UnPack_Oper_po1(data)
 
 	return p1.Data[:], p1.IsOk()
 }
@@ -541,56 +469,76 @@ func jsonPacking(data []byte) []byte {
 }
 
 func jsonUnpack(data []byte) ([]byte, error) {
-	if begin_Dinfo == 0 {
-		fmt.Println("Pack_Rand use.")
-		begin_Dinfo = 1
-	}
+	/*
+		if begin_Dinfo == 0 {
+			fmt.Println("Pack_Rand use.")
+			begin_Dinfo = 1
+		}
+	*/
 	return jsonUnPack_OperGen(data)
 }
 
-type Aes struct {
+func jsonUnpack_po1(data []byte) ([]byte, error) {
+	/*
+		if begin_Dinfo == 0 {
+			fmt.Println("Pack_Rand use.")
+			begin_Dinfo = 1
+		}
+	*/
+	return jsonUnPack_OperGen(data)
+}
+
+type gsaes struct {
 	cpr        cipher.Block
 	cfbE, cfbD cipher.Stream
 }
 
-func CreateAes(key string) Aes {
-	var v1 Aes
+func createAes(key []byte) gsaes {
+	var v1 gsaes
 
-	v1.cpr, _ = aes.NewCipher([]byte(key))
+	v1.cpr, _ = aes.NewCipher(key)
 	v1.cfbE = cipher.NewCFBEncrypter(v1.cpr, commonIV)
 	v1.cfbD = cipher.NewCFBDecrypter(v1.cpr, commonIV)
 	return v1
 }
 
-func (a *Aes) encrypter(data []byte) []byte {
+func (a *gsaes) encrypter(data []byte) []byte {
 	dst := make([]byte, len(data))
 	a.cfbE.XORKeyStream(dst, data)
 	return dst
 }
 
-func (a *Aes) decrypter(data []byte) []byte {
+func (a *gsaes) decrypter(data []byte) []byte {
 	dst := make([]byte, len(data))
 	a.cfbD.XORKeyStream(dst, data)
 	return dst
 }
 
-type Aespack struct {
-	a        Aes
+type GsPack interface {
+	Packing(data []byte) []byte
+	Unpack(data []byte) ([]byte, error)
+
+	ChangeCryKey() []byte
+	IsTheVersionConsistent() []byte
+}
+
+type aespack struct {
+	a        gsaes
 	fewriter *flate.Writer
 	fereader io.ReadCloser
 }
 
-func (ap *Aespack) compress2(data []byte) []byte   { return data }
-func (ap *Aespack) uncompress2(data []byte) []byte { return data }
+func (ap *aespack) compress2(data []byte) []byte   { return data }
+func (ap *aespack) uncompress2(data []byte) []byte { return data }
 
-func (ap *Aespack) compress(data []byte) []byte {
+func (ap *aespack) compress(data []byte) []byte {
 	var b bytes.Buffer
 
 	if ap.fewriter == nil {
 		zw, err := flate.NewWriter(&b, 1)
 		ap.fewriter = zw
 		if err != nil {
-			Logger.Fatalln(err)
+			logger.Fatalln(err)
 		}
 	} else {
 		ap.fewriter.Reset(&b)
@@ -599,16 +547,16 @@ func (ap *Aespack) compress(data []byte) []byte {
 	zw := ap.fewriter
 
 	if _, err := io.Copy(zw, bytes.NewReader(data)); err != nil {
-		Logger.Fatalln(err)
+		logger.Fatalln(err)
 	}
 	if err := zw.Close(); err != nil {
-		Logger.Fatalln(err)
+		logger.Fatalln(err)
 	}
 
 	return b.Bytes()
 }
 
-func (ap *Aespack) uncompress(data []byte) []byte {
+func (ap *aespack) uncompress(data []byte) []byte {
 	var b bytes.Buffer
 
 	if ap.fereader == nil {
@@ -617,28 +565,28 @@ func (ap *Aespack) uncompress(data []byte) []byte {
 	} else {
 		zr := ap.fereader
 		if err := zr.(flate.Resetter).Reset(bytes.NewReader(data), nil); err != nil {
-			Logger.Fatalln(err)
+			logger.Fatalln(err)
 		}
 	}
 	zr := ap.fereader
 
 	if _, err := io.Copy(&b, zr); err != nil {
-		Logger.Fatalln(err)
+		logger.Fatalln(err)
 	}
 	if err := zr.Close(); err != nil {
-		Logger.Fatalln(err)
+		logger.Fatalln(err)
 	}
 
 	return b.Bytes()
 }
 
-func (ap *Aespack) Packing(data []byte) []byte {
+func (ap *aespack) Packing(data []byte) []byte {
 	jdata := jsonPacking(data)
 	crydata := ap.a.encrypter(jdata)
 	edata := base64.StdEncoding.EncodeToString(crydata)
 	return append([]byte(edata), 0)
 }
-func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
+func (ap *aespack) Unpack(data []byte) ([]byte, error) {
 	d1, _ := base64.StdEncoding.DecodeString(string(data))
 	jdata := ap.a.decrypter(d1)
 	var pdata []byte
@@ -658,20 +606,13 @@ func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 	}
 
 	if po1.IsPOVersion() {
-		//po1 := po
-		/*
-			err := po1.IsOk()
-			if err != nil {
-				return []byte{}, err
-			}
-		*/
 		if po1.OperType == POVersion {
 			if string(po1.OperData) == Version {
 				pdata = []byte{}
 				err = nil
 			} else {
 				pdata = []byte{}
-				err = errors.New("Version is error.")
+				err = errors.New("Version is error.  " + "error version: " + string(po1.OperData))
 			}
 		}
 		return pdata, err
@@ -683,12 +624,12 @@ func (ap *Aespack) Unpack(data []byte) ([]byte, error) {
 	return pdata, err
 }
 
-func (ap *Aespack) setKey(key []byte) error {
-	ap.a = CreateAes(string(key))
+func (ap *aespack) setKey(key []byte) error {
+	ap.a = createAes(key)
 	return nil
 }
 
-func (ap *Aespack) ChangeCryKey() []byte {
+func (ap *aespack) ChangeCryKey() []byte {
 
 	jdata := jsonPacking_OperChangeKey()
 	crydata := ap.a.encrypter(jdata)
@@ -699,7 +640,7 @@ func (ap *Aespack) ChangeCryKey() []byte {
 	return append([]byte(edata), 0)
 }
 
-func (ap *Aespack) IsTheVersionConsistent() []byte {
+func (ap *aespack) IsTheVersionConsistent() []byte {
 
 	jdata := jsonPacking_OperVersion()
 	crydata := ap.a.encrypter(jdata)
@@ -708,41 +649,28 @@ func (ap *Aespack) IsTheVersionConsistent() []byte {
 	return append([]byte(edata), 0)
 }
 
-func CreateAesPack(key string) Aespack {
+func createAesPack(key string) *aespack {
 	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
 		fmt.Println("Error: The key is not 16, 24, or 32 bytes.")
-		Logger.Fatalln("Error: The key is not 16, 24, or 32 bytes.")
-		//panic(errors.New("Error: The key is not 16, 24, or 32 bytes."))
-		//os.Exit(10)
+		logger.Fatalln("Error: The key is not 16, 24, or 32 bytes.")
 	}
-	ap1 := Aespack{}
-	ap1.a = CreateAes(key)
+	ap1 := aespack{}
+	ap1.a = createAes([]byte(key))
 	ap1.fewriter = nil
 	ap1.fereader = nil
 
-	return ap1
+	return &ap1
 }
 
-type Gorou_status struct {
-	status int32
-}
+func NewGsPack(key string) GsPack {
+	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
+		fmt.Println("Error: The key is not 16, 24, or 32 bytes.")
+		logger.Fatalln("Error: The key is not 16, 24, or 32 bytes.")
+	}
+	ap1 := aespack{}
+	ap1.a = createAes([]byte(key))
+	ap1.fewriter = nil
+	ap1.fereader = nil
 
-const (
-	gorou_s_begin = 0
-	gorou_s_ok    = 1
-	gorou_s_close = 2
-	gorou_s_end   = 3
-)
-
-func (g *Gorou_status) IsOk() bool {
-	v1 := atomic.LoadInt32(&g.status)
-	return v1 == gorou_s_ok
-}
-func (g *Gorou_status) SetOk()    { atomic.SwapInt32(&g.status, gorou_s_ok) }
-func (g *Gorou_status) SetClose() { atomic.SwapInt32(&g.status, gorou_s_close) }
-
-func CreateGorouStatus() *Gorou_status {
-	g1 := new(Gorou_status)
-	g1.status = gorou_s_ok
-	return g1
+	return &ap1
 }
