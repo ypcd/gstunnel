@@ -61,7 +61,7 @@ func init() {
 
 	Logger = gstunnellib.CreateFileLogger("gstunnel_client.err.log")
 
-	fmt.Println("VER:", version)
+	Logger.Println("gstunnel client.")
 	Logger.Println("VER:", version)
 
 	gsconfig = gstunnellib.CreateGsconfig("config.client.json")
@@ -72,24 +72,18 @@ func init() {
 	tmr_display_time = time.Second * time.Duration(gsconfig.Tmr_display_time)
 	tmr_changekey_time = time.Second * time.Duration(gsconfig.Tmr_changekey_time)
 
-	fmt.Println("debug:", debug_client)
 	Logger.Println("debug:", debug_client)
 
-	fmt.Println("Mt_model:", Mt_model)
 	Logger.Println("Mt_model:", Mt_model)
-	fmt.Println("tmr_display_time:", tmr_display_time)
 	Logger.Println("tmr_display_time:", tmr_display_time)
-	fmt.Println("tmr_changekey_time:", tmr_changekey_time)
 	Logger.Println("tmr_changekey_time:", tmr_changekey_time)
 
-	fmt.Println("info_protobuf:", gstunnellib.Info_protobuf)
 	Logger.Println("info_protobuf:", gstunnellib.Info_protobuf)
 
 	if debug_client {
 		go func() {
 			Logger.Fatalln("http server: ", http.ListenAndServe("localhost:6060", nil))
 		}()
-		fmt.Println("Debug server listen: localhost:6060")
 		Logger.Println("Debug server listen: localhost:6060")
 	}
 
@@ -104,9 +98,8 @@ func main() {
 func run() {
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Println("Error:", x)
+			fmt.Fprintln(os.Stderr, x)
 			Logger.Println(x, "  App restart.")
-			fmt.Println("App restart.")
 
 		}
 	}()
@@ -152,7 +145,7 @@ func run() {
 			//checkError(err)
 			if err != nil {
 				if server_conn_error_total > 10000 {
-					fmt.Fprintln(os.Stderr, "Error: [net.Dial('tcp', service)]:", err.Error())
+					fmt.Fprintln(os.Stderr, "Error: server_conn_error_total > 10000")
 					Logger.Fatalln("Error: server_conn_error_total > 10000")
 				}
 				server_conn_error_total++
@@ -190,19 +183,18 @@ func srcTOdstUn_count(src net.Conn, dst net.Conn) {
 }
 
 func IsTheVersionConsistent_send(dst net.Conn, apack gstunnellib.GsPack, wlent *int64) error {
-	return gstunnellib.IsTheVersionConsistent_sendEx(dst, apack, wlent, nil)
+	return gstunnellib.IsTheVersionConsistent_send(dst, apack, wlent)
 }
 
 func ChangeCryKey_send(dst net.Conn, apack gstunnellib.GsPack, ChangeCryKey_Total *int, wlent *int64) error {
-	return gstunnellib.ChangeCryKey_sendEX(dst, apack, ChangeCryKey_Total, wlent, nil)
+	return gstunnellib.ChangeCryKey_send(dst, apack, ChangeCryKey_Total, wlent)
 }
 
 func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Println("Go exit.")
-			err := fmt.Errorf("Error:%s", x)
-			fmt.Println(err)
+			//err := fmt.Errorf("Error:%s", x)
+			//fmt.Println(err)
 			Logger.Println(x, "\t\tGo exit.")
 
 		}
@@ -342,9 +334,8 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Println("Go exit.")
-			err := fmt.Errorf("Error:%s", x)
-			fmt.Println(err)
+			//err := fmt.Errorf("Error:%s", x)
+			//fmt.Println(err)
 			Logger.Println(x, "  Go exit.")
 
 		}
@@ -468,9 +459,6 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status, wlentotal int64) {
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Println("Go exit.")
-			err := fmt.Errorf("Error:%s", x)
-			fmt.Println(err)
 			Logger.Println(x, "  Go exit.")
 		}
 	}()
@@ -594,7 +582,6 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Println("Go exit.")
 			Logger.Println(x, "  Go exit.")
 		}
 	}()
@@ -733,7 +720,6 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Println("Go exit.")
 			Logger.Println(x, "  Go exit.")
 		}
 	}()
@@ -834,7 +820,6 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status) {
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Println("Go exit.")
 			Logger.Println(x, "  Go exit.")
 		}
 	}()
@@ -972,5 +957,5 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 }
 
 func checkError(err error) {
-	gstunnellib.CheckError(err)
+	gstunnellib.CheckErrorEx(err, Logger)
 }
