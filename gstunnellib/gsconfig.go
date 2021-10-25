@@ -2,6 +2,7 @@ package gstunnellib
 
 import (
 	"encoding/json"
+	. "gstunnellib/gsrand"
 	"io"
 	"os"
 )
@@ -35,11 +36,11 @@ func (gs *GsConfig) GetServers() []string {
 
 func CreateGsconfig(confn string) *GsConfig {
 	f, err := os.Open(confn)
-	CheckError(err)
+	checkError(err)
 	defer f.Close()
 
 	buf, err := io.ReadAll(f)
-	CheckError(err)
+	checkError(err)
 
 	//fmt.Println(string(buf))
 	var gsconfig GsConfig
@@ -50,7 +51,7 @@ func CreateGsconfig(confn string) *GsConfig {
 	gsconfig.Mt_model = true
 
 	err = json.Unmarshal(buf, &gsconfig)
-	CheckError(err)
+	checkError(err)
 	/*
 		if gsconfig.Tmr_display_time == 0 {
 			gsconfig.Tmr_display_time = 5

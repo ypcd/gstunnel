@@ -19,9 +19,9 @@ import (
 	"log"
 	"strings"
 	"timerm"
-	"unsafe"
 
 	//"math"
+	. "gstunnellib/gsrand"
 	"math/rand"
 	"sync"
 	"testing"
@@ -42,23 +42,6 @@ func getrand() int {
 	rd := rand.New(
 		rand.NewSource(time.Now().UnixNano()))
 	return rd.Int()
-}
-
-func Test_JPackandun(t *testing.T) {
-	t.Log("....................")
-
-	v1 := []byte{1, 2, 3}
-	j1 := jsonPacking(v1)
-	t.Log(j1)
-	t.Log(string(j1))
-	dp1, _ := jsonUnpack(j1)
-	t.Log(dp1)
-	t.Log(string(v1) == string(dp1))
-	if string(v1) == string(dp1) {
-		t.Log("ok.")
-	} else {
-		t.Error()
-	}
 }
 
 func getsha1(data []byte) string {
@@ -104,7 +87,7 @@ func Test_Aest(t *testing.T) {
 
 	fbuf := GetRDCBytes(1024 * 1024)
 
-	a1 := createAes([]byte(getrandString(32)))
+	a1 := createAes([]byte(GetrandString(32)))
 
 	tmp := a1.encrypter(fbuf)
 	outbuf := a1.decrypter(tmp)
@@ -122,7 +105,7 @@ func aest() {
 
 	fbuf := GetRDCBytes(1024)
 
-	a1 := createAes([]byte(getrandString(32)))
+	a1 := createAes([]byte(GetrandString(32)))
 	tmp := a1.encrypter(fbuf)
 	outbuf := a1.decrypter(tmp)
 
@@ -143,7 +126,7 @@ func Test_Aestpack(t *testing.T) {
 
 	fbuf := GetRDCBytes(1024 * 1024)
 
-	a1 := createAesPack(getrandString(32))
+	a1 := CreateAesPack(GetrandString(32))
 
 	tmp := a1.Packing(fbuf)
 	t.Log(tmp[len(tmp)-3:])
@@ -162,7 +145,7 @@ func aestpack() {
 
 	fbuf := GetRDCBytes(1024 * 1024)
 
-	a1 := createAesPack(getrandString(32))
+	a1 := CreateAesPack(GetrandString(32))
 	tmp := a1.Packing(fbuf)
 	outbuf, _ := a1.Unpack(tmp)
 
@@ -178,38 +161,6 @@ func Test_MtAestpack(t *testing.T) {
 	mtF(aestpack)
 }
 
-func Test_PackRand(t *testing.T) {
-	d1 := []byte("123Abc")
-	p1 := PackRand{Pack{d1}, rand.Int63()}
-	j1, _ := json.Marshal(p1)
-
-	p2 := PackRand{}
-	json.Unmarshal(j1, &p2)
-	d2 := p2.Data
-	if string(d1) == string(d2) {
-		t.Log("d1 == d2, ok.")
-	}
-	if p1.Rand == p2.Rand {
-		t.Log("p1.Rand == p2.Rand, ok.")
-	}
-	t.Log(d2)
-}
-
-func Test_GetSha256Hex(t *testing.T) {
-	data := []byte{}
-
-	buf := make([]byte, 100)
-
-	for i := range [100]int{} {
-		_ = i
-		blen := binary.PutVarint(buf, GetRDInt64())
-		data = append(data, buf[:blen]...)
-	}
-
-	t.Log(GetSha256Hex(data))
-
-}
-
 func Test_binConv(t *testing.T) {
 	buf := make([]byte, 0)
 	p1 := &buf
@@ -220,35 +171,9 @@ func Test_binConv(t *testing.T) {
 	t.Log(&buf, buf)
 }
 
-func Test_jsonPacking_OperChangeKey(t *testing.T) {
-	b1 := jsonPacking_OperChangeKey()
-	p1 := UnPack_Oper(b1)
-	_ = p1
-	t.Log("Ok.")
-}
-
-func Test_jsonPacking_OperGen(t *testing.T) {
-
-	data := GetRDBytes(10024)
-
-	b1 := jsonPacking_OperGen(data)
-	p1 := UnPack_Oper(b1)
-	_ = p1
-
-	unb2, _ := jsonUnPack_OperGen(b1)
-	h1 := GetSha256Hex(unb2)
-	if GetSha256Hex(data) == h1 {
-		t.Log("Ok.")
-	} else {
-		t.Error("Error.")
-	}
-	_ = p1
-
-}
-
 func Test_Aespack_changeCryKey(t *testing.T) {
 	key := GetRDBytes(32)
-	ap1 := createAesPack(string(key))
+	ap1 := CreateAesPack(string(key))
 	cp1 := ap1.a
 	key2 := GetRDBytes(32)
 	ap1.setKey(key2)
@@ -267,7 +192,7 @@ func Test_Aespack_changeCryKey(t *testing.T) {
 
 func Test_Aespack_changeCryKey2(t *testing.T) {
 	key := GetRDBytes(32)
-	ap1 := createAesPack(string(key))
+	ap1 := CreateAesPack(string(key))
 	cp1 := ap1.a
 
 	ap1.ChangeCryKey()
@@ -284,31 +209,13 @@ func Test_Aespack_changeCryKey2(t *testing.T) {
 	_ = key
 }
 
-func Test_JPackandUnpack_oper(t *testing.T) {
-	t.Log("....................")
-
-	v1 := GetRDBytes(953512)
-	j1 := jsonPacking(v1)
-	t.Log(j1)
-	t.Log(string(j1))
-	dp1, _ := jsonUnpack(j1)
-	t.Log(dp1)
-	t.Log(GetSha256Hex(v1) == GetSha256Hex(dp1))
-	if GetSha256Hex(v1) == GetSha256Hex(dp1) {
-		t.Log("ok.")
-	} else {
-		t.Error()
-	}
-	_ = v1
-}
-
 func Test_AesEncryDecry(t *testing.T) {
 	d1 := GetRDBytes(15834)
 	key1 := GetRDBytes(32)
 	key2 := GetRDBytes(32)
 
-	ap1 := createAesPack(string(key1))
-	ap2 := createAesPack(string(key2))
+	ap1 := CreateAesPack(string(key1))
+	ap2 := CreateAesPack(string(key2))
 
 	ed1 := ap1.a.encrypter(d1)
 	ed2 := ap2.a.encrypter(d1)
@@ -331,79 +238,6 @@ func Test_wbuf(t *testing.T) {
 	t.Log(wbuf)
 	wbuf = wbuf[len(wbuf):]
 	t.Log(wbuf)
-}
-
-func Test_poversion(t *testing.T) {
-	//d1 := GetRDBytes(15834)
-	key1 := GetRDBytes(32)
-	//key2 := GetRDBytes(32)
-
-	ap1 := createAesPack(string(key1))
-	//ap2 := createAesPack(string(key2))
-
-	pb1 := ap1.IsTheVersionConsistent()
-	unb1, err := ap1.Unpack(pb1)
-	if err == nil {
-		t.Log("ok.")
-	} else {
-		t.Error("Error.")
-	}
-	_, _ = unb1, err
-
-}
-
-func Test_bytesjoin(t *testing.T) {
-
-	//const totalLoop int = 10000 * 100
-
-	po1 := CreatePackOperChangeKey()
-
-	po1.Data = GetRDBytes(1024)
-
-	/*
-		if po1.GetSha256_old() != po1.GetSha256() {
-			t.Error("error.")
-		}
-
-		b1 := po1.GetSha256_old()
-		b2 := po1.GetSha256()
-
-		if hex.EncodeToString(b1[:]) != hex.EncodeToString(b2[:]) {
-			t.Error("error.")
-		}
-	*/
-}
-
-func Test_po_size(t *testing.T) {
-
-	//const totalLoop int = 10000 * 100
-
-	key1 := GetRDBytes(32)
-	//key2 := GetRDBytes(32)
-
-	ap1 := createAesPack(string(key1))
-
-	po1 := ap1.Packing([]byte{})
-
-	po2 := CreatePackOperChangeKey()
-
-	_ = po2
-
-	pd := CreatePackOperGen([]byte{})
-
-	re, _ := json.Marshal(pd)
-
-	_ = re
-
-	pd2 := CreatePackOperGen_po1([]byte{})
-
-	re2, _ := json.Marshal(pd2)
-
-	t.Log(string(re), len(re))
-	t.Log(string(re2), len(re2))
-	t.Log("po size:", len(po1), unsafe.Sizeof(po2))
-	t.Log("po size:", len(po1), unsafe.Sizeof(po2))
-
 }
 
 type s_str struct {
@@ -500,87 +334,6 @@ func Test_compress(t *testing.T) {
 	}
 }
 
-func Test_compress_un(t *testing.T) {
-	ap1 := createAesPack(getrandString(32))
-	data1 := GetRDCBytes(1024 * 6)
-
-	const data2 = `<?xml version="1.0"?>
-<book>
-	<meta name="title" content="The Go Programming Language"/>
-	<meta name="authors" content="Alan Donovan and Brian Kernighan"/>
-	<meta name="published" content="2015-10-26"/>
-	<meta name="isbn" content="978-0134190440"/>
-	<data>...</data>
-</book>
-`
-
-	pd := CreatePackOperGen([]byte(data1))
-
-	re, _ := json.Marshal(pd)
-
-	_ = re
-
-	data := []byte(re)
-
-	rt := timerm.CreateRecoTime()
-	t.Log(rt.Run())
-	cdata := ap1.compress(data)
-	t.Log(rt.Run())
-	t.Log("compress:", float32(len(cdata))/float32(len(data)))
-
-	undata := ap1.uncompress(cdata)
-	if bytes.Equal(data, undata) {
-		t.Log("ok.")
-	} else {
-		t.Log("Error.")
-	}
-
-}
-
-func Test_compress_un2(t *testing.T) {
-	ap1 := createAesPack(getrandString(32))
-	data1 := GetRDCBytes(1024 * 6)
-
-	const data2 = `<?xml version="1.0"?>
-<book>
-	<meta name="title" content="The Go Programming Language"/>
-	<meta name="authors" content="Alan Donovan and Brian Kernighan"/>
-	<meta name="published" content="2015-10-26"/>
-	<meta name="isbn" content="978-0134190440"/>
-	<data>...</data>
-</book>
-`
-
-	pd := CreatePackOperGen([]byte(data1))
-
-	re, _ := json.Marshal(pd)
-
-	_ = re
-
-	data := []byte(re)
-
-	rt := timerm.CreateRecoTime()
-	t.Log(rt.Run())
-	cdata := ap1.Packing(data)
-	t.Log(rt.Run())
-	t.Log("compress:", float32(len(cdata))/float32(len(data)))
-
-	undata, _ := ap1.Unpack(cdata)
-	if bytes.Equal(data, undata) {
-		t.Log("ok.")
-	} else {
-		t.Log("Error.")
-	}
-
-}
-
-func Test_pack_type_size(t *testing.T) {
-	ap1 := createAesPack(getrandString(32))
-	t.Log(len(ap1.Packing([]byte{})))
-	t.Log(len(ap1.ChangeCryKey()))
-	t.Log(len(ap1.IsTheVersionConsistent()))
-}
-
 func Test_GsPack(t *testing.T) {
 
 	fbuf := GetRDCBytes(1024 * 1024)
@@ -598,4 +351,35 @@ func Test_GsPack(t *testing.T) {
 		t.Error()
 	}
 
+}
+
+func Test_nullFunc(t *testing.T) {
+	Nullprint(1, "a")
+	Nullprintf("%s.\n", "test")
+}
+
+func Test_poversion(t *testing.T) {
+	//d1 := GetRDBytes(15834)
+	key1 := GetRDBytes(32)
+	//key2 := GetRDBytes(32)
+
+	ap1 := CreateAesPack(string(key1))
+	//ap2 := CreateAesPack(string(key2))
+
+	pb1 := ap1.IsTheVersionConsistent()
+	unb1, err := ap1.Unpack(pb1)
+	if err == nil {
+		t.Log("ok.")
+	} else {
+		t.Error("Error.")
+	}
+	_, _ = unb1, err
+
+}
+
+func Test_pack_type_size(t *testing.T) {
+	ap1 := CreateAesPack(GetrandString(32))
+	t.Log(len(ap1.Packing([]byte{})))
+	t.Log(len(ap1.ChangeCryKey()))
+	t.Log(len(ap1.IsTheVersionConsistent()))
 }
