@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-type GsConfig_1 struct {
+type gsConfig_1 struct {
 	Listen             string
 	Server             string
 	Key                string

@@ -126,7 +126,7 @@ func Test_Aestpack(t *testing.T) {
 
 	fbuf := GetRDCBytes(1024 * 1024)
 
-	a1 := CreateAesPack(GetrandString(32))
+	a1 := createAesPack(GetrandString(32))
 
 	tmp := a1.Packing(fbuf)
 	t.Log(tmp[len(tmp)-3:])
@@ -145,7 +145,7 @@ func aestpack() {
 
 	fbuf := GetRDCBytes(1024 * 1024)
 
-	a1 := CreateAesPack(GetrandString(32))
+	a1 := createAesPack(GetrandString(32))
 	tmp := a1.Packing(fbuf)
 	outbuf, _ := a1.Unpack(tmp)
 
@@ -173,7 +173,7 @@ func Test_binConv(t *testing.T) {
 
 func Test_Aespack_changeCryKey(t *testing.T) {
 	key := GetRDBytes(32)
-	ap1 := CreateAesPack(string(key))
+	ap1 := createAesPack(string(key))
 	cp1 := ap1.a
 	key2 := GetRDBytes(32)
 	ap1.setKey(key2)
@@ -192,7 +192,7 @@ func Test_Aespack_changeCryKey(t *testing.T) {
 
 func Test_Aespack_changeCryKey2(t *testing.T) {
 	key := GetRDBytes(32)
-	ap1 := CreateAesPack(string(key))
+	ap1 := createAesPack(string(key))
 	cp1 := ap1.a
 
 	ap1.ChangeCryKey()
@@ -214,8 +214,8 @@ func Test_AesEncryDecry(t *testing.T) {
 	key1 := GetRDBytes(32)
 	key2 := GetRDBytes(32)
 
-	ap1 := CreateAesPack(string(key1))
-	ap2 := CreateAesPack(string(key2))
+	ap1 := createAesPack(string(key1))
+	ap2 := createAesPack(string(key2))
 
 	ed1 := ap1.a.encrypter(d1)
 	ed2 := ap2.a.encrypter(d1)
@@ -363,8 +363,8 @@ func Test_poversion(t *testing.T) {
 	key1 := GetRDBytes(32)
 	//key2 := GetRDBytes(32)
 
-	ap1 := CreateAesPack(string(key1))
-	//ap2 := CreateAesPack(string(key2))
+	ap1 := createAesPack(string(key1))
+	//ap2 := createAesPack(string(key2))
 
 	pb1 := ap1.IsTheVersionConsistent()
 	unb1, err := ap1.Unpack(pb1)
@@ -378,7 +378,7 @@ func Test_poversion(t *testing.T) {
 }
 
 func Test_pack_type_size(t *testing.T) {
-	ap1 := CreateAesPack(GetrandString(32))
+	ap1 := createAesPack(GetrandString(32))
 	t.Log(len(ap1.Packing([]byte{})))
 	t.Log(len(ap1.ChangeCryKey()))
 	t.Log(len(ap1.IsTheVersionConsistent()))

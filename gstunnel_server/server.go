@@ -149,7 +149,7 @@ func ChangeCryKey_send(dst net.Conn, apack gstunnellib.GsPack, ChangeCryKey_Tota
 	return gstunnellib.ChangeCryKey_send(dst, apack, ChangeCryKey_Total, wlent)
 }
 
-func srcTOdstP_old(src net.Conn, dst net.Conn) {
+func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		if x := recover(); x != nil {
 			//err := fmt.Errorf("Error:%s", x)
@@ -158,7 +158,7 @@ func srcTOdstP_old(src net.Conn, dst net.Conn) {
 		}
 	}()
 
-	tmr := timerm.CreateTimer(time.Second * 60)
+	tmr_out := timerm.CreateTimer(time.Second * 60)
 	//tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
@@ -187,7 +187,7 @@ func srcTOdstP_old(src net.Conn, dst net.Conn) {
 	//defer outf.Close()
 	//defer outf2.Close()
 	buf := make([]byte, net_read_size)
-	var rbuf []byte
+	var rbuf []byte = buf
 	var wbuf bytes.Buffer
 
 	var wlent, rlent int64 = 0, 0
@@ -206,38 +206,48 @@ func srcTOdstP_old(src net.Conn, dst net.Conn) {
 
 	err = IsTheVersionConsistent_send(dst, apack, &wlent)
 	if err != nil {
+		Logger.Println("Error:", err)
 		return
 	}
 	err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
 	if err != nil {
+		Logger.Println("Error:", err)
 		return
 	}
 
 	for {
-
+		buf = rbuf
 		recot_p_r.Run()
 		rlen, err := src.Read(buf)
 		recot_p_r.Run()
 
 		rlent = rlent + int64(rlen)
 
-		if tmr.Run() {
+		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
 		if rlen == 0 {
+			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
 
 		//outf.Write(buf[:rlen])
-		tmr.Boot()
+		tmr_out.Boot()
 		rbuf = buf
 		buf = buf[:rlen]
 
 		wbuf.Reset()
-		wbuf.Write(buf)
+		_, err = wbuf.Write(buf)
+		if err != nil {
+			Logger.Println("Error:", err)
+			return
+		}
+		buf = nil
 		//wbuf = append(wbuf, buf...)
 		//fre := bool(len(wbuf) > 0)
 
@@ -245,17 +255,26 @@ func srcTOdstP_old(src net.Conn, dst net.Conn) {
 			buf = apack.Packing(wbuf.Bytes())
 			//wbuf = wbuf[len(wbuf):]
 			//outf2.Write(buf)
-			for {
+			if len(buf) <= 0 {
+				Logger.Println("Error: gspack.packing is error.")
+				return
+			}
+			for len(buf) > 0 {
 				if len(buf) > 0 {
 					recot_p_w.Run()
 					wlen, err := dst.Write(buf)
 					recot_p_w.Run()
+					if err != nil {
+						Logger.Println("Error:", err)
+					}
 
 					wlent = wlent + int64(wlen)
 					if wlen == 0 {
+						Logger.Println("Error: dst.write() wlen==0 func exit.")
 						return
 					}
 					if err != nil && wlen <= 0 {
+						Logger.Println("Error: dst.write() wlen<=0 func exit.  ", err)
 						continue
 					}
 					if len(buf) == wlen {
@@ -270,6 +289,7 @@ func srcTOdstP_old(src net.Conn, dst net.Conn) {
 		if tmr_changekey.Run() {
 			err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
 			if err != nil {
+				Logger.Println("Error:", err)
 				return
 			}
 		}
@@ -346,10 +366,12 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 	err = IsTheVersionConsistent_send(dst, apack, &wlent)
 	if err != nil {
+		Logger.Println("Error:", err, " func exit.")
 		return
 	}
 	err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
 	if err != nil {
+		Logger.Println("Error:", err, " func exit.")
 		return
 	}
 
@@ -357,7 +379,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	dst = nil
 
 	for dst_ok.IsOk() {
-
+		buf = make([]byte, net_read_size)
 		recot_p_r.Run()
 		rlen, err := src.Read(buf)
 		recot_p_r.Run()
@@ -365,12 +387,15 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		rlent = rlent + int64(rlen)
 
 		if tmr_out.Run() {
+			Logger.Println("Error: time out func exit.")
 			return
 		}
 		if rlen == 0 {
+			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
 
@@ -380,12 +405,14 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 		if len(buf) > 0 {
 			buf = apack.Packing(buf)
+		} else {
+			continue
 		}
 		dst_chan <- buf
-
-		buf = make([]byte, net_read_size)
+		buf = nil
 
 		if !dst_ok.IsOk() {
+			Logger.Println("Error: not dst_ok.isok() func exit.")
 			return
 		}
 
@@ -396,6 +423,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 			//outf2.Write(buf)
 
 			dst_chan <- buf
+			buf = nil
 		}
 
 		if tmrP2.Run() {
@@ -405,17 +433,14 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 			fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
 		}
-
 	}
+	Logger.Println("Func exit.")
 }
 
 func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status, wlentotal int64) {
 	defer func() {
 		if x := recover(); x != nil {
-			fmt.Println("Go exit.")
-			err := fmt.Errorf("Error:%s", x)
-			fmt.Println(err)
-			Logger.Println(x, "  Go exit.")
+			Logger.Println("Error:", x, "  Go exit.")
 		}
 	}()
 
@@ -473,7 +498,11 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 
 		buf, ok := <-dst_chan
 		if !ok {
+			Logger.Println("Error: dst_chan is not ok, func exit.")
 			return
+		}
+		if len(buf) <= 0 {
+			continue
 		}
 
 		//wbuf.Reset()
@@ -481,32 +510,31 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 		//wbuf = append(wbuf, buf...)
 		//fre := bool(len(wbuf) > 0)
 
-		if len(buf) > 0 {
+		//wbuf = wbuf[len(wbuf):]
+		//outf2.Write(buf)
+		for len(buf) > 0 {
+			if len(buf) > 0 {
+				recot_p_w.Run()
+				wlen, err := dst.Write(buf)
+				recot_p_w.Run()
 
-			//wbuf = wbuf[len(wbuf):]
-			//outf2.Write(buf)
-			for {
-				if len(buf) > 0 {
-					recot_p_w.Run()
-					wlen, err := dst.Write(buf)
-					recot_p_w.Run()
+				wlent = wlent + int64(wlen)
 
-					wlent = wlent + int64(wlen)
-
-					tmr_out.Boot()
-					if wlen == 0 {
-						return
-					}
-					if err != nil && wlen <= 0 {
-						continue
-					}
-					if len(buf) == wlen {
-						break
-					}
-					buf = buf[wlen:]
-				} else {
+				tmr_out.Boot()
+				if wlen == 0 {
+					Logger.Println("Error: dst.write() wlen==0 func exit.")
+					return
+				}
+				if err != nil && wlen <= 0 {
+					Logger.Println("Error: dst.write() wlen<=0 func exit.  ", err)
+					continue
+				}
+				if len(buf) == wlen {
 					break
 				}
+				buf = buf[wlen:]
+			} else {
+				break
 			}
 		}
 
@@ -519,9 +547,9 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 
 		}
 		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
-
 	}
 }
 
@@ -536,7 +564,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	           fmt.Println("Go exit.")
 	       }
 	   }()*/
-	tmr := timerm.CreateTimer(time.Second * 60)
+	tmr_out := timerm.CreateTimer(time.Second * 60)
 	//tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
@@ -564,6 +592,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	//defer outf2.Close()
 	buf := make([]byte, net_read_size)
 	var rbuf, wbuf []byte
+	rbuf = buf
 	var wlent, rlent uint64 = 0, 0
 
 	defer func() {
@@ -575,27 +604,32 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	}()
 
 	for {
+		buf = rbuf
 		recot_un_r.Run()
 		rlen, err := src.Read(buf)
 		recot_un_r.Run()
 
 		rlent = rlent + uint64(rlen)
 
-		if tmr.Run() {
+		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
 		if rlen == 0 {
+			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
 
 		//outf.Write(buf[:rlen])
-		tmr.Boot()
+		tmr_out.Boot()
 		rbuf = buf
 		buf = buf[:rlen]
 		wbuf = append(wbuf, buf...)
+		buf = nil
 		for {
 			ix, fre := find0(wbuf)
 			p(ix, fre)
@@ -704,6 +738,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	}()
 
 	for dst_ok.IsOk() {
+		buf = make([]byte, net_read_size)
 		recot_un_r.Run()
 		rlen, err := src.Read(buf)
 		recot_un_r.Run()
@@ -716,15 +751,17 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 		//rlen = 0
 
 		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
 		if rlen == 0 {
+			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
-
 		//outf.Write(buf[:rlen])
 		tmr_out.Boot()
 		//rbuf = buf
@@ -735,8 +772,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 
 		//wbuf = wbuff.Bytes()
 		dst_chan <- buf
-
-		buf = make([]byte, net_read_size)
+		buf = nil
 
 		if tmrP2.Run() {
 			fmt.Printf("unpack  trlen:%d\n", rlent)
@@ -745,6 +781,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 			fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
 		}
 	}
+	Logger.Println("Func exit.")
 }
 
 func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status) {
@@ -814,10 +851,15 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 
 		buf, ok := <-dst_chan
 		if !ok {
+			Logger.Println("Error: dst_chan is not ok, func exit.")
 			return
+		}
+		if len(buf) <= 0 {
+			continue
 		}
 
 		wbuf = append(wbuf, buf...)
+		buf = nil
 		for {
 			ix, fre := find0(wbuf)
 			pf("ix: %d, fre: %t\n", ix, fre)
@@ -847,9 +889,11 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 
 						pf("twlen:%d  wlen:%d\n", wlent, wlen)
 						if wlen == 0 {
+							Logger.Println("Error: dst.write() wlen==0 func exit.")
 							return
 						}
 						if err != nil && wlen <= 0 {
+							Logger.Println("Error: dst.write() wlen<=0 func exit.  ", err)
 							continue
 						}
 						if len(buf) == wlen {
@@ -866,6 +910,7 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 			}
 		}
 		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
 

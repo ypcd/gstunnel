@@ -17,6 +17,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"runtime"
+	"sync"
 
 	//	"runtime"
 	//	"runtime/pprof"
@@ -51,10 +53,36 @@ var Mt_model bool = true
 var tmr_display_time = time.Second * 5
 var tmr_changekey_time = time.Second * 60
 
+var bufPool sync.Pool
+
 //var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 //var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
+type buf_chan struct {
+	Gbuf *[]byte
+	Len  int
+}
+
+func newBufChan(inGbuf *[]byte, inLen int) *buf_chan {
+	return &buf_chan{inGbuf, inLen}
+}
+
+func (bc *buf_chan) Bytes() []byte {
+	return (*bc.Gbuf)[:bc.Len]
+}
+
 func init() {
+
+	bufPool = sync.Pool{
+		New: func() interface{} {
+			// The Pool's New function should generally only return pointer
+			// types, since a pointer can be put into the return interface
+			// value without an allocation:
+			re := make([]byte, net_read_size)
+			return &re
+		},
+	}
+
 	if debug_client {
 		//pf = fmt.Printf
 	}
@@ -99,7 +127,10 @@ func run() {
 	defer func() {
 		if x := recover(); x != nil {
 			fmt.Fprintln(os.Stderr, x)
-			Logger.Println(x, "  App restart.")
+			Logger.Println("Panic:", x, "  App restart.")
+			tmp := make([]byte, 6000)
+			nlen := runtime.Stack(tmp, true)
+			Logger.Println("Panic stack:", string(tmp[:nlen]))
 
 		}
 	}()
@@ -124,6 +155,7 @@ func run() {
 	for {
 		acc, err := listener.Accept()
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
 		server_conn_error_total := 0
@@ -133,14 +165,13 @@ func run() {
 				Logger.Println("Error: server_conn_error_total: ", server_conn_error_total)
 				server_conn_error_total = 0
 				tmr.Boot()
-
 			}
 			//service := gsconfig.GetServer_rand()
 			service := gsconfig.GetServers()[0]
 			//tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
 			//_ = tcpAddr
 			//fmt.Println(tcpAddr)
-			checkError(err)
+			//checkError(err)
 			dst, err := net.Dial("tcp", service)
 			//checkError(err)
 			if err != nil {
@@ -195,7 +226,10 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		if x := recover(); x != nil {
 			//err := fmt.Errorf("Error:%s", x)
 			//fmt.Println(err)
-			Logger.Println(x, "\t\tGo exit.")
+			Logger.Println("Panic:", x, "  Go exit.")
+			tmp := make([]byte, 6000)
+			nlen := runtime.Stack(tmp, true)
+			Logger.Println("Panic stack:", string(tmp[:nlen]))
 
 		}
 	}()
@@ -228,8 +262,8 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	defer dst.Close()
 	//defer outf.Close()
 	//defer outf2.Close()
-	buf := make([]byte, net_read_size)
-	var rbuf []byte
+	var buf []byte = make([]byte, net_read_size)
+	var rbuf []byte = buf
 	var wbuf bytes.Buffer
 
 	var wlent, rlent int64 = 0, 0
@@ -248,14 +282,16 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 
 	err = IsTheVersionConsistent_send(dst, apack, &wlent)
 	if err != nil {
+		Logger.Println("Error:", err)
 		return
 	}
 	err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
 	if err != nil {
+		Logger.Println("Error:", err)
 		return
 	}
 	for {
-
+		buf = rbuf
 		recot_p_r.Run()
 		rlen, err := src.Read(buf)
 		recot_p_r.Run()
@@ -265,12 +301,15 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		rlent = rlent + int64(rlen)
 
 		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
 		if rlen == 0 {
+			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
 
@@ -280,26 +319,40 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		buf = buf[:rlen]
 
 		wbuf.Reset()
-		wbuf.Write(buf)
+		_, err = wbuf.Write(buf)
+		if err != nil {
+			Logger.Println("Error:", err)
+			return
+		}
+		buf = nil
 		//wbuf = append(wbuf, buf...)
 		// := bool(len(wbuf) > 0)
 		if wbuf.Len() > 0 {
 			buf = apack.Packing(wbuf.Bytes())
 			//wbuf = wbuf[len(wbuf):]
 			//outf2.Write(buf)
-			for {
+			if len(buf) <= 0 {
+				Logger.Println("Error: gspack.packing is error.")
+				return
+			}
+			for len(buf) > 0 {
 				if len(buf) > 0 {
 					recot_p_w.Run()
 					wlen, err := dst.Write(buf)
 					recot_p_w.Run()
+					if err != nil {
+						Logger.Println("Error:", err)
+					}
 					//recot_p_w.RunDisplay("---recot_p_w:")
 					//fmt.Println("---wlen:", wlen)
 
 					wlent = wlent + int64(wlen)
 					if wlen == 0 {
+						Logger.Println("Error: dst.write() wlen==0 func exit.")
 						return
 					}
 					if err != nil && wlen <= 0 {
+						Logger.Println("Error: dst.write() wlen<=0 func exit.  ", err)
 						continue
 					}
 					if len(buf) == wlen {
@@ -314,6 +367,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		if tmr_changekey.Run() {
 			err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
 			if err != nil {
+				Logger.Println("Error:", err)
 				return
 			}
 		}
@@ -336,8 +390,10 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		if x := recover(); x != nil {
 			//err := fmt.Errorf("Error:%s", x)
 			//fmt.Println(err)
-			Logger.Println(x, "  Go exit.")
-
+			Logger.Println("Panic:", x, "  Go exit.")
+			tmp := make([]byte, 6000)
+			nlen := runtime.Stack(tmp, true)
+			Logger.Println("Panic stack:", string(tmp[:nlen]))
 		}
 	}()
 
@@ -368,7 +424,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	//defer dst.Close()
 	//defer outf.Close()
 	//defer outf2.Close()
-	buf := make([]byte, net_read_size)
+	var buf []byte
 	//var rbuf []byte
 	//var wbuf bytes.Buffer
 
@@ -376,7 +432,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 	ChangeCryKey_Total := 0
 
-	dst_chan := make(chan ([]byte), netPUn_chan_cache_size)
+	dst_chan := make(chan *buf_chan, netPUn_chan_cache_size)
 	defer close(dst_chan)
 
 	dst_ok := gstunnellib.CreateGorouStatus()
@@ -392,10 +448,12 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 	err = IsTheVersionConsistent_send(dst, apack, &wlent)
 	if err != nil {
+		Logger.Println("Error:", err, " func exit.")
 		return
 	}
 	err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
 	if err != nil {
+		Logger.Println("Error:", err, " func exit.")
 		return
 	}
 
@@ -403,7 +461,13 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	dst = nil
 
 	for dst_ok.IsOk() {
-
+		//buf = make([]byte, net_read_size)
+		gbuf, ok := bufPool.Get().(*[]byte)
+		if !ok {
+			Logger.Println("Error: bufPool.Get().(*[]byte).")
+			return
+		}
+		buf = *gbuf
 		recot_p_r.Run()
 		rlen, err := src.Read(buf)
 		recot_p_r.Run()
@@ -413,12 +477,15 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		rlent = rlent + int64(rlen)
 
 		if tmr_out.Run() {
+			Logger.Println("Error: time out func exit.")
 			return
 		}
 		if rlen == 0 {
+			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
 
@@ -428,21 +495,29 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 		if len(buf) > 0 {
 			buf = apack.Packing(buf)
+			if len(*gbuf) == net_read_size {
+				bufPool.Put(gbuf)
+				gbuf = nil
+			}
+		} else {
+			continue
 		}
-		dst_chan <- buf
-
-		buf = make([]byte, net_read_size)
+		tmpbuf := buf
+		dst_chan <- newBufChan(&tmpbuf, len(buf))
+		buf = nil
 
 		if !dst_ok.IsOk() {
+			Logger.Println("Error: not dst_ok.isok() func exit.")
 			return
 		}
 
 		if tmr_changekey.Run() {
-			buf := apack.ChangeCryKey()
+			var buf []byte = apack.ChangeCryKey()
 			ChangeCryKey_Total += 1
 			tmr_out.Boot()
 			//outf2.Write(buf)
-			dst_chan <- buf
+			dst_chan <- newBufChan(&buf, len(buf))
+
 		}
 		if tmrP2.Run() {
 			fmt.Printf("pack  trlen:%d\n", rlent)
@@ -454,12 +529,16 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		}
 
 	}
+	Logger.Println("Func exit.")
 }
 
-func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status, wlentotal int64) {
+func srcTOdstP_w(dst net.Conn, dst_chan chan *buf_chan, dst_ok *gstunnellib.Gorou_status, wlentotal int64) {
 	defer func() {
 		if x := recover(); x != nil {
-			Logger.Println(x, "  Go exit.")
+			Logger.Println("Panic:", x, "  Go exit.")
+			tmp := make([]byte, 6000)
+			nlen := runtime.Stack(tmp, true)
+			Logger.Println("Panic stack:", string(tmp[:nlen]))
 		}
 	}()
 
@@ -514,9 +593,14 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 
 	for {
 
-		buf, ok := <-dst_chan
+		chanbuf, ok := <-dst_chan
 		if !ok {
+			Logger.Println("Error: dst_chan is not ok, func exit.")
 			return
+		}
+		var buf []byte = chanbuf.Bytes()
+		if len(buf) <= 0 {
+			continue
 		}
 
 		//wbuf.Reset()
@@ -524,35 +608,38 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 		//wbuf = append(wbuf, buf...)
 		//fre := bool(len(wbuf) > 0)
 
-		if len(buf) > 0 {
+		//wbuf = wbuf[len(wbuf):]
+		//outf2.Write(buf)
+		for len(buf) > 0 {
+			if len(buf) > 0 {
+				recot_p_w.Run()
+				wlen, err := dst.Write(buf)
+				recot_p_w.Run()
 
-			//wbuf = wbuf[len(wbuf):]
-			//outf2.Write(buf)
-			for {
-				if len(buf) > 0 {
-					recot_p_w.Run()
-					wlen, err := dst.Write(buf)
-					recot_p_w.Run()
+				wlent = wlent + int64(wlen)
 
-					wlent = wlent + int64(wlen)
-
-					tmr_out.Boot()
-					if wlen == 0 {
-						return
-					}
-					if err != nil && wlen <= 0 {
-						continue
-					}
-					if len(buf) == wlen {
-						break
-					}
-					buf = buf[wlen:]
-				} else {
+				tmr_out.Boot()
+				if wlen == 0 {
+					Logger.Println("Error: dst.write() wlen==0 func exit.")
+					return
+				}
+				if err != nil && wlen <= 0 {
+					Logger.Println("Error: dst.write() wlen<=0 func exit.  ", err)
+					continue
+				}
+				if len(buf) == wlen {
 					break
 				}
+				buf = buf[wlen:]
+			} else {
+				break
 			}
 		}
-
+		if len(*chanbuf.Gbuf) == net_read_size {
+			bufPool.Put(chanbuf.Gbuf)
+			chanbuf = nil
+			buf = nil
+		}
 		if tmrP2.Run() {
 			fmt.Printf("pack twlen:%d\n", wlent)
 			//fmt.Println("goPackTotal:", goPackTotal)
@@ -562,9 +649,9 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 
 		}
 		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
-
 	}
 }
 
@@ -582,7 +669,10 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 	defer func() {
 		if x := recover(); x != nil {
-			Logger.Println(x, "  Go exit.")
+			Logger.Println("Panic:", x, "  Go exit.")
+			tmp := make([]byte, 6000)
+			nlen := runtime.Stack(tmp, true)
+			Logger.Println("Panic stack:", string(tmp[:nlen]))
 		}
 	}()
 
@@ -613,8 +703,9 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 	//defer outf.Close()
 	//defer outf2.Close()
-	buf := make([]byte, net_read_size)
+	var buf []byte = make([]byte, net_read_size)
 	var rbuf, wbuf []byte
+	rbuf = buf
 	//var wbuff bytes.Buffer
 	wlent, rlent := 0, 0
 
@@ -628,6 +719,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	}()
 
 	for {
+		buf = rbuf
 		recot_un_r.Run()
 		rlen, err := src.Read(buf)
 		recot_un_r.Run()
@@ -640,12 +732,15 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 		//rlen = 0
 
 		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
 		if rlen == 0 {
+			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
 
@@ -660,6 +755,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 		//wbuf = wbuff.Bytes()
 
 		wbuf = append(wbuf, buf...)
+		buf = nil
 		for {
 			ix, fre := find0(wbuf)
 			pf("ix: %d, fre: %t\n", ix, fre)
@@ -688,9 +784,11 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 						pf("twlen:%d  wlen:%d\n", wlent, wlen)
 						if wlen == 0 {
+							Logger.Println("Error: dst.write() wlen==0 func exit.")
 							return
 						}
 						if err != nil && wlen <= 0 {
+							Logger.Println("Error: dst.write() wlen<=0 func exit.  ", err)
 							continue
 						}
 						if len(buf) == wlen {
@@ -715,12 +813,17 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 			fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 	}
+	//Logger.Println("Func exit.")
+
 }
 
 func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	defer func() {
 		if x := recover(); x != nil {
-			Logger.Println(x, "  Go exit.")
+			Logger.Println("Panic:", x, "  Go exit.")
+			tmp := make([]byte, 6000)
+			nlen := runtime.Stack(tmp, true)
+			Logger.Println("Panic stack:", string(tmp[:nlen]))
 		}
 	}()
 
@@ -752,12 +855,12 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	defer dst.Close()
 	//defer outf.Close()
 	//defer outf2.Close()
-	buf := make([]byte, net_read_size)
+	var buf []byte
 	//var rbuf []byte
 	//var wbuff bytes.Buffer
 	rlent := int64(0)
 
-	dst_chan := make(chan ([]byte), netPUn_chan_cache_size)
+	dst_chan := make(chan *buf_chan, netPUn_chan_cache_size)
 	defer close(dst_chan)
 
 	dst_ok := gstunnellib.CreateGorouStatus()
@@ -774,6 +877,14 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	}()
 
 	for dst_ok.IsOk() {
+		//buf = make([]byte, net_read_size)
+		gbuf, ok := bufPool.Get().(*[]byte)
+		if !ok {
+			Logger.Println("Error: bufPool.Get().(*[]byte).")
+			return
+		}
+		buf = *gbuf
+
 		recot_un_r.Run()
 		rlen, err := src.Read(buf)
 		recot_un_r.Run()
@@ -786,12 +897,15 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 		//rlen = 0
 
 		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
 		if rlen == 0 {
+			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
+			Logger.Println("Error:", err)
 			continue
 		}
 
@@ -799,14 +913,16 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 		tmr_out.Boot()
 		//rbuf = buf
 		buf = buf[:rlen]
-
+		if len(buf) <= 0 {
+			continue
+		}
 		//wbuff.Reset()
 		//wbuff.Write(buf)
 
 		//wbuf = wbuff.Bytes()
-		dst_chan <- buf
-
-		buf = make([]byte, net_read_size)
+		dst_chan <- newBufChan(gbuf, len(buf))
+		buf = nil
+		gbuf = nil
 
 		if tmrP2.Run() {
 			fmt.Printf("unpack  trlen:%d\n", rlent)
@@ -815,12 +931,16 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 			fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
 		}
 	}
+	Logger.Println("Func exit.")
 }
 
-func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou_status) {
+func srcTOdstUn_w(dst net.Conn, dst_chan chan *buf_chan, dst_ok *gstunnellib.Gorou_status) {
 	defer func() {
 		if x := recover(); x != nil {
-			Logger.Println(x, "  Go exit.")
+			Logger.Println("Panic:", x, "  Go exit.")
+			tmp := make([]byte, 6000)
+			nlen := runtime.Stack(tmp, true)
+			Logger.Println("Panic stack:", string(tmp[:nlen]))
 		}
 	}()
 
@@ -853,7 +973,6 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 	//defer outf.Close()
 	//defer outf2.Close()
 
-	//buf := make([]byte, net_read_size)
 	var wbuf []byte
 	//var wbuff bytes.Buffer
 	var wlent uint64 = 0
@@ -883,12 +1002,18 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 
 		//wbuf = wbuff.Bytes()
 
-		buf, ok := <-dst_chan
+		chanbuf, ok := <-dst_chan
 		if !ok {
+			Logger.Println("Error: dst_chan is not ok, func exit.")
 			return
+		}
+		var buf []byte = chanbuf.Bytes()
+		if len(buf) <= 0 {
+			continue
 		}
 
 		wbuf = append(wbuf, buf...)
+		buf = nil
 		for {
 			ix, fre := find0(wbuf)
 			pf("ix: %d, fre: %t\n", ix, fre)
@@ -918,9 +1043,11 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 
 						pf("twlen:%d  wlen:%d\n", wlent, wlen)
 						if wlen == 0 {
+							Logger.Println("Error: dst.write() wlen==0 func exit.")
 							return
 						}
 						if err != nil && wlen <= 0 {
+							Logger.Println("Error: dst.write() wlen<=0 func exit.  ", err)
 							continue
 						}
 						if len(buf) == wlen {
@@ -937,6 +1064,7 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 			}
 		}
 		if tmr_out.Run() {
+			Logger.Println("Error: Time out func exit.")
 			return
 		}
 
@@ -944,6 +1072,11 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Goro
 			fmt.Printf("unpack  twlen:%d\n", wlent)
 
 			fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+		}
+		if len(*chanbuf.Gbuf) == net_read_size {
+			bufPool.Put(chanbuf.Gbuf)
+			chanbuf = nil
+			buf = nil
 		}
 	}
 }

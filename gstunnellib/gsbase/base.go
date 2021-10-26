@@ -1,3 +1,3 @@
 package gsbase
 
-const Version string = "V5.0"
+const Version string = "V5.3.6"

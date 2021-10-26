@@ -30,7 +30,7 @@ var commonIV = []byte{171, 158, 1, 73, 31, 98, 64, 85, 209, 217, 131, 150, 104, 
 
 var logger *log.Logger
 
-var Info_protobuf bool = true
+const Info_protobuf bool = true
 
 func Nullprint(v ...interface{}) (int, error)                       { return 1, nil }
 func Nullprintf(format string, a ...interface{}) (n int, err error) { return 1, nil }
@@ -160,7 +160,7 @@ func (ap *aespack) IsTheVersionConsistent() []byte {
 	return append([]byte(edata), 0)
 }
 
-func CreateAesPack(key string) *aespack {
+func createAesPack(key string) *aespack {
 	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
 		logger.Fatalln("Error: The key is not 16, 24, or 32 bytes.")
 	}

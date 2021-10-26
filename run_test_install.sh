@@ -2,6 +2,8 @@
 export GO111MODULE="auto"
 export GOPROXY="https://goproxy.io,direct"
 
-source run_test.sh
+sh ./run_test.sh
+echo "test done."
 
-source run_install.sh
+sh ./run_install.sh
+echo "install done."
