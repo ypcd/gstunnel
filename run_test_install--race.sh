@@ -2,7 +2,7 @@
 export GO111MODULE="auto"
 export GOPROXY="https://goproxy.io,direct"
 
-sh ./run_test.sh
+sh ./run_test--race.sh
 echo "test done."
 
 sh ./run_install--race.sh

@@ -1,6 +1,9 @@
 package gstunnellib
 
-import "testing"
+import (
+	"log"
+	"testing"
+)
 
 func Test_checkError_test(t *testing.T) {
 	checkError_test(nil, t)
@@ -10,4 +13,9 @@ func Test_checkError_test(t *testing.T) {
 func Test_CheckError(t *testing.T) {
 	checkError(nil)
 	//checkError(errors.New("123"))
+}
+
+func Test_panic_exit(t *testing.T) {
+	defer Panic_exit(log.Default())
+	panic("Error.")
 }
