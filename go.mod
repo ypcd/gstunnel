@@ -1,4 +1,4 @@
-module gstunnel
+module gstunnel/v5
 
 go 1.17
 
