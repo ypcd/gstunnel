@@ -2,7 +2,7 @@ package gstunnellib
 
 import (
 	"encoding/json"
-	. "gstunnellib/gsrand"
+	. "gstunnel/gstunnellib/gsrand"
 	"io"
 	"os"
 )

@@ -5,10 +5,10 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"timerm"
+	"gstunnel/timerm"
 
 	//. "gstunnellib"
-	. "gstunnellib/gsrand"
+	. "gstunnel/gstunnellib/gsrand"
 	"math/rand"
 	"strings"
 	"testing"

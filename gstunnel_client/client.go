@@ -9,7 +9,8 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"gstunnellib"
+	"gstunnel/gstunnellib"
+	"gstunnel/timerm"
 	"log"
 	"net"
 	"net/http"
@@ -19,7 +20,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"timerm"
 )
 
 const version string = gstunnellib.Version

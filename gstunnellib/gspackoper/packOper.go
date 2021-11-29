@@ -13,8 +13,8 @@ import (
 	//"gstunnellib"
 	"sync"
 
-	"gstunnellib/gsbase"
-	. "gstunnellib/gsrand"
+	"gstunnel/gstunnellib/gsbase"
+	. "gstunnel/gstunnellib/gsrand"
 
 	"google.golang.org/protobuf/proto"
 )
