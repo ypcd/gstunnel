@@ -1,4 +1,4 @@
-module gstunnel/v5
+module github.com/ypcd/gstunnel/v5
 
 go 1.17
 
