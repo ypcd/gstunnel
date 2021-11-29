@@ -2,9 +2,10 @@ package gstunnellib
 
 import (
 	"encoding/json"
-	. "gstunnel/gstunnellib/gsrand"
 	"io"
 	"os"
+
+	. "github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
 
 type gsConfig_1 struct {

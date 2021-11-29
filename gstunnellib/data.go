@@ -14,8 +14,8 @@ import (
 	"errors"
 	"log"
 
-	"gstunnel/gstunnellib/gsbase"
-	. "gstunnel/gstunnellib/gspackoper"
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gsbase"
+	. "github.com/ypcd/gstunnel/v6/gstunnellib/gspackoper"
 )
 
 const Version string = gsbase.Version

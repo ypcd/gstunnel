@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	. "gstunnel/gstunnellib/gsrand"
+	. "github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
 
 type Pack struct {

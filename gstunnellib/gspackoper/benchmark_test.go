@@ -27,8 +27,9 @@ Benchmark_json_proto_inbytes-2         65790         18357 ns/op       10425 B/o
 */
 
 import (
-	. "gstunnel/gstunnellib/gsrand"
 	"testing"
+
+	. "github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
 
 var po1 *packOper = createPackOperChangeKey()

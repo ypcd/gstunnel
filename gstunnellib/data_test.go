@@ -15,17 +15,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"gstunnel/timerm"
 	"io"
 	"log"
 	"strings"
 
+	"github.com/ypcd/gstunnel/v6/timerm"
+
 	//"math"
-	. "gstunnel/gstunnellib/gsrand"
 	"math/rand"
 	"sync"
 	"testing"
 	"time"
+
+	. "github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
 
 var testi1 = 1

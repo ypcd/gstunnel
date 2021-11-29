@@ -5,14 +5,16 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
-	"gstunnel/timerm"
+
+	"github.com/ypcd/gstunnel/v6/timerm"
 
 	//. "gstunnellib"
-	. "gstunnel/gstunnellib/gsrand"
 	"math/rand"
 	"strings"
 	"testing"
 	"unsafe"
+
+	. "github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
 
 func Test_JPackandun(t *testing.T) {
