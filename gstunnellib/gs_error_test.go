@@ -1,13 +1,14 @@
 package gstunnellib
 
 import (
+	"errors"
 	"log"
 	"testing"
 )
 
-func Test_checkError_test(t *testing.T) {
-	checkError_test(nil, t)
-	//checkError_test(errors.New("123"), t)
+func Test_CheckError_test(t *testing.T) {
+	CheckError_test(nil, t)
+	//CheckError_test(errors.New("123"), t)
 }
 
 func Test_CheckError(t *testing.T) {
@@ -15,7 +16,12 @@ func Test_CheckError(t *testing.T) {
 	//checkError(errors.New("123"))
 }
 
-func Test_panic_exit(t *testing.T) {
-	defer Panic_exit(log.Default())
+func Test_CheckError2(t *testing.T) {
+	checkError(errors.New("Error test."))
+	//checkError(errors.New("123"))
+}
+
+func Test_Panic_Recover(t *testing.T) {
+	defer Panic_Recover(log.Default())
 	panic("Error.")
 }

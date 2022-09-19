@@ -1,6 +1,8 @@
 package gsrand
 
 import (
+	randc "crypto/rand"
+	"fmt"
 	"testing"
 )
 
@@ -66,7 +68,8 @@ func Test_GetRDInt16(t *testing.T) {
 
 func Test_GetRDCInt_max(t *testing.T) {
 	for i := 0; i < 10; i++ {
-		t.Log(GetRDCInt_max(2))
+		rd := GetRDCInt_max(6)
+		t.Log(rd)
 	}
 }
 
@@ -74,4 +77,14 @@ func Test_getrandString(t *testing.T) {
 	for i := 0; i < 1000; i++ {
 		t.Log(GetrandString(100))
 	}
+}
+
+func Test_getbytes(t *testing.T) {
+	rd := make([]byte, 16)
+	_, err := randc.Reader.Read(rd)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(rd)
+
 }

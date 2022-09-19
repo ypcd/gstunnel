@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 
 	"github.com/ypcd/gstunnel/v6/timerm"
+	"google.golang.org/protobuf/proto"
 
 	//. "gstunnellib"
 	"math/rand"
@@ -14,6 +15,8 @@ import (
 	"testing"
 	"unsafe"
 
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gshash"
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 	. "github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
 
@@ -61,8 +64,21 @@ func Test_GetSha256Hex(t *testing.T) {
 		data = append(data, buf[:blen]...)
 	}
 
-	t.Log(GetSha256Hex(data))
+	t.Log(gshash.GetSha256Hex(data))
 
+}
+
+func Test_GetSha256Hex_all(t *testing.T) {
+	rawdata := gsrand.GetRDBytes(1024 * 1024)
+
+	po1 := createPackOperGen(rawdata)
+	vsha256 := string(po1.GetSha256())
+	if string(po1.GetSha256_buf()) != vsha256 || string(po1.GetSha256_nobuf()) != vsha256 {
+		t.Fatalf("GetSha256 is error.")
+	}
+	if string(po1.GetSha256_old()) != vsha256 || string(po1.GetSha256_pool()) != vsha256 {
+		t.Fatalf("GetSha256 is error.")
+	}
 }
 func Test_JsonPacking_OperChangeKey(t *testing.T) {
 	b1 := JsonPacking_OperChangeKey()
@@ -80,8 +96,8 @@ func Test_JsonPacking_OperGen(t *testing.T) {
 	_ = p1
 
 	unb2, _ := jsonUnPack_OperGen(b1)
-	h1 := GetSha256Hex(unb2)
-	if GetSha256Hex(data) == h1 {
+	h1 := gshash.GetSha256Hex(unb2)
+	if gshash.GetSha256Hex(data) == h1 {
 		t.Log("Ok.")
 	} else {
 		t.Error("Error.")
@@ -99,8 +115,8 @@ func Test_JPackandUnpack_oper(t *testing.T) {
 	t.Log(string(j1))
 	dp1, _ := jsonUnpack(j1)
 	t.Log(dp1)
-	t.Log(GetSha256Hex(v1) == GetSha256Hex(dp1))
-	if GetSha256Hex(v1) == GetSha256Hex(dp1) {
+	t.Log(gshash.GetSha256Hex(v1) == gshash.GetSha256Hex(dp1))
+	if gshash.GetSha256Hex(v1) == gshash.GetSha256Hex(dp1) {
 		t.Log("ok.")
 	} else {
 		t.Error()
@@ -121,13 +137,13 @@ func Test_bytesjoin(t *testing.T) {
 	b3 := po1.GetSha256_buf()
 	b4 := po1.GetSha256_pool()
 
-	if bytes.Compare(b1[:], b2) != 0 {
+	if !bytes.Equal(b1[:], b2) {
 		t.Error("error.")
 	}
-	if bytes.Compare(b2, b3) != 0 {
+	if !bytes.Equal(b2, b3) {
 		t.Fatal()
 	}
-	if bytes.Compare(b3, b4) != 0 {
+	if !bytes.Equal(b3, b4) {
 		t.Fatal()
 	}
 
@@ -252,5 +268,27 @@ func Test_json__(t *testing.T) {
 	pdata := JsonPacking_OperChangeKey()
 	if !IsChangeCryKey(pdata) {
 		t.Fatal()
+	}
+}
+
+func Test_GetEncryKey(t *testing.T) {
+	key := GetRDBytes(32)
+
+	keyPD := packOper{PackOperPro: PackOperPro{
+		OperType: POChangeCryKey,
+		OperData: []byte(key),
+		Rand:     GetRDCBytes(8),
+	}}
+
+	keyPD.HashHex = keyPD.GetSha256()
+
+	keyData, err := proto.Marshal(&keyPD)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	key1 := GetEncryKey(keyData)
+	if !bytes.Equal(key, key1) {
+		t.Error("key != key1.")
 	}
 }

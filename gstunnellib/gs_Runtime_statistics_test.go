@@ -15,7 +15,7 @@ func Test_Runtime_statistics_imp(t *testing.T) {
 	v1.AddSrcTotalNetData_send(1)
 
 	re, err := v1.GetJson()
-	checkError_test(err, t)
+	CheckError_test(err, t)
 	fmt.Println(re)
 	fmt.Println(string(re))
 }
@@ -27,7 +27,7 @@ func Test_Runtime_statistics_imp_mgo(t *testing.T) {
 		for {
 			time.Sleep(time.Millisecond * 100)
 			re, err := v1.GetJson()
-			checkError_test(err, t)
+			CheckError_test(err, t)
 			_ = re
 			fmt.Println(string(re))
 		}

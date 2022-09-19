@@ -71,3 +71,7 @@ func (pl *pool_map) Size() int {
 func (pl *pool_map) print() {
 	fmt.Printf("%+v\n", pl)
 }
+
+func (pl *pool_map) ClearAll() {
+	pl.data = make(map[int64][]byte, 0)
+}

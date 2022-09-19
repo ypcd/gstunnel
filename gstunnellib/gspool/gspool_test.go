@@ -16,6 +16,7 @@ func Test_pool_map(t *testing.T) {
 		wg.Add(1)
 		go func(count int) {
 			defer wg.Done()
+			time.Sleep(time.Millisecond * time.Duration(rand.Int31n(400)))
 			re := pl.Get()
 			re[count%(loop_total/256+1)]++
 			time.Sleep(time.Millisecond * time.Duration(rand.Int31n(400)))
@@ -25,18 +26,23 @@ func Test_pool_map(t *testing.T) {
 	wg.Wait()
 	fmt.Println("size:", pl.Size())
 
-	tt := 0
-	sz := pl.Size()
-	for i := 0; i < sz; i++ {
-		for _, v := range pl.Get() {
-			tt += int(v)
-		}
-		//fmt.Println("for tt:", tt)
-	}
-	fmt.Println("size:", pl.Size())
-	fmt.Println("tt:", tt)
+	pl.ClearAll()
 	pl.print()
 
+	/*
+		tt := 0
+		sz := pl.Size()
+
+			for i := 0; i < sz; i++ {
+				for _, v := range pl.Get() {
+					tt += int(v)
+				}
+				//fmt.Println("for tt:", tt)
+			}
+			fmt.Println("size:", pl.Size())
+			fmt.Println("tt:", tt)
+			pl.print()
+	*/
 }
 
 func Test_no_pool_map(t *testing.T) {

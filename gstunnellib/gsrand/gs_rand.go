@@ -34,10 +34,19 @@ func GetRDCbyte() byte {
 	return byte(rd.Int64())
 }
 
-func GetRDCBytes(byteLen int) []byte {
+func GetRDCBytes_old(byteLen int) []byte {
 	data := make([]byte, byteLen)
 	for i := 0; i < byteLen; i++ {
 		data[i] = GetRDCbyte()
+	}
+	return data
+}
+
+func GetRDCBytes(byteLen int) []byte {
+	data := make([]byte, byteLen)
+	_, err := randc.Reader.Read(data)
+	if err != nil {
+		panic(err)
 	}
 	return data
 }

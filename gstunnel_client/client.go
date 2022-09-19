@@ -14,8 +14,6 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
-	"runtime"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -49,7 +47,7 @@ var Mt_model bool = true
 var tmr_display_time = time.Second * 5
 var tmr_changekey_time = time.Second * 60
 
-var bufPool sync.Pool
+//var bufPool sync.Pool
 
 var GRuntimeStatistics gstunnellib.Runtime_statistics
 
@@ -69,17 +67,17 @@ func (bc *buf_chan) Bytes() []byte {
 func init() {
 
 	GRuntimeStatistics = gstunnellib.NewRuntimeStatistics()
-
-	bufPool = sync.Pool{
-		New: func() interface{} {
-			// The Pool's New function should generally only return pointer
-			// types, since a pointer can be put into the return interface
-			// value without an allocation:
-			re := make([]byte, net_read_size)
-			return &re
-		},
-	}
-
+	/*
+		bufPool = sync.Pool{
+			New: func() interface{} {
+				// The Pool's New function should generally only return pointer
+				// types, since a pointer can be put into the return interface
+				// value without an allocation:
+				re := make([]byte, net_read_size)
+				return &re
+			},
+		}
+	*/
 	Logger = gstunnellib.CreateFileLogger("gstunnel_client.err.log")
 
 	Logger.Println("gstunnel client.")
@@ -118,16 +116,7 @@ func main() {
 }
 
 func run() {
-	defer func() {
-		if x := recover(); x != nil {
-			fmt.Fprintln(os.Stderr, x)
-			Logger.Println("Panic:", x, "  App restart.")
-			tmp := make([]byte, 6000)
-			nlen := runtime.Stack(tmp, true)
-			Logger.Println("Panic stack:", string(tmp[:nlen]))
-
-		}
-	}()
+	defer gstunnellib.Panic_Recover(Logger)
 
 	var lstnaddr string
 	var connaddr []string
@@ -215,7 +204,7 @@ func ChangeCryKey_send(dst net.Conn, apack gstunnellib.GsPack, ChangeCryKey_Tota
 }
 
 func srcTOdstP_st(src net.Conn, dst net.Conn) {
-	defer gstunnellib.Panic_exit(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -281,7 +270,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		rlent = rlent + int64(rlen)
 
 		if tmr_out.Run() {
-			Logger.Println("Error: Time out func exit.")
+			Logger.Println("Error: Time out, func exit.")
 			return
 		}
 		if rlen == 0 {
@@ -363,7 +352,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 }
 
 func srcTOdstP_mt(src net.Conn, dst net.Conn) {
-	defer gstunnellib.Panic_exit(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -423,13 +412,16 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	dst = nil
 
 	for dst_ok.IsOk() {
-		//buf = make([]byte, net_read_size)
-		gbuf, ok := bufPool.Get().(*[]byte)
-		if !ok {
-			Logger.Println("Error: bufPool.Get().(*[]byte).")
-			return
-		}
-		buf = *gbuf
+		buf = make([]byte, net_read_size)
+		/*
+				gbuf, ok := bufPool.Get().(*[]byte)
+				if !ok {
+					Logger.Println("Error: bufPool.Get().(*[]byte).")
+					return
+				}
+
+			buf = *gbuf
+		*/
 		recot_p_r.Run()
 		rlen, err := src.Read(buf)
 		recot_p_r.Run()
@@ -454,10 +446,13 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 
 		if len(buf) > 0 {
 			buf = apack.Packing(buf)
-			if len(*gbuf) == net_read_size {
-				bufPool.Put(gbuf)
-				gbuf = nil
-			}
+			buf = nil
+			/*
+				if len(*gbuf) == net_read_size {
+					bufPool.Put(gbuf)
+					gbuf = nil
+				}
+			*/
 		} else {
 			continue
 		}
@@ -491,7 +486,7 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 }
 
 func srcTOdstP_w(dst net.Conn, dst_chan chan *buf_chan, dst_ok *gstunnellib.Gorou_status, wlentotal int64) {
-	defer gstunnellib.Panic_exit(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -572,11 +567,13 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan *buf_chan, dst_ok *gstunnellib.Goro
 				break
 			}
 		}
-		if len(*chanbuf.Gbuf) == net_read_size {
-			bufPool.Put(chanbuf.Gbuf)
-			chanbuf = nil
-			buf = nil
-		}
+		/*
+			if len(*chanbuf.Gbuf) == net_read_size {
+				bufPool.Put(chanbuf.Gbuf)
+				chanbuf = nil
+				buf = nil
+			}
+		*/
 		if tmrP2.Run() && debug_client {
 			fmt.Printf("pack twlen:%d\n", wlent)
 			//fmt.Println("goPackTotal:", goPackTotal)
@@ -586,7 +583,7 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan *buf_chan, dst_ok *gstunnellib.Goro
 
 		}
 		if tmr_out.Run() {
-			Logger.Println("Error: Time out func exit.")
+			Logger.Println("Error: Time out, func exit.")
 			return
 		}
 	}
@@ -604,7 +601,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	defer src.Close()
 	defer dst.Close()
 
-	defer gstunnellib.Panic_exit(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -653,7 +650,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 		rlent = rlent + rlen
 
 		if tmr_out.Run() {
-			Logger.Println("Error: Time out func exit.")
+			Logger.Println("Error: Time out, func exit.")
 			return
 		}
 		if rlen == 0 {
@@ -728,7 +725,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 }
 
 func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
-	defer gstunnellib.Panic_exit(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -771,13 +768,15 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	}()
 
 	for dst_ok.IsOk() {
-		//buf = make([]byte, net_read_size)
-		gbuf, ok := bufPool.Get().(*[]byte)
-		if !ok {
-			Logger.Println("Error: bufPool.Get().(*[]byte).")
-			return
-		}
-		buf = *gbuf
+		buf = make([]byte, net_read_size)
+		/*
+			gbuf, ok := bufPool.Get().(*[]byte)
+			if !ok {
+				Logger.Println("Error: bufPool.Get().(*[]byte).")
+				return
+			}
+			buf = *gbuf
+		*/
 
 		recot_un_r.Run()
 		rlen, err := src.Read(buf)
@@ -788,7 +787,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 		rlent = rlent + int64(rlen)
 
 		if tmr_out.Run() {
-			Logger.Println("Error: Time out func exit.")
+			Logger.Println("Error: Time out, func exit.")
 			return
 		}
 		if rlen == 0 {
@@ -806,9 +805,9 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 			continue
 		}
 
-		dst_chan <- newBufChan(gbuf, len(buf))
-		buf = nil
-		gbuf = nil
+		tmpbuf := &buf
+		dst_chan <- newBufChan(tmpbuf, len(buf))
+		//buf = nil
 
 		if tmrP2.Run() && debug_client {
 			fmt.Printf("unpack  trlen:%d\n", rlent)
@@ -821,7 +820,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 }
 
 func srcTOdstUn_w(dst net.Conn, dst_chan chan *buf_chan, dst_ok *gstunnellib.Gorou_status) {
-	defer gstunnellib.Panic_exit(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 
@@ -928,7 +927,7 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan *buf_chan, dst_ok *gstunnellib.Gor
 			}
 		}
 		if tmr_out.Run() {
-			Logger.Println("Error: Time out func exit.")
+			Logger.Println("Error: Time out, func exit.")
 			return
 		}
 
@@ -937,11 +936,13 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan *buf_chan, dst_ok *gstunnellib.Gor
 
 			fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
-		if len(*chanbuf.Gbuf) == net_read_size {
-			bufPool.Put(chanbuf.Gbuf)
-			chanbuf = nil
-			buf = nil
-		}
+		/*
+			if len(*chanbuf.Gbuf) == net_read_size {
+				bufPool.Put(chanbuf.Gbuf)
+				chanbuf = nil
+				buf = nil
+			}
+		*/
 	}
 }
 

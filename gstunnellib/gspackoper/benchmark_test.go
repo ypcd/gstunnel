@@ -10,6 +10,15 @@ Benchmark_bytesjoin_buf-4       11542570              3124 ns/op            1592
 Benchmark_bytesjoin_pool-4      12583714              2873 ns/op             376 B/op          9 allocs/op
 Benchmark_bytesjoin_gen-4       11374375              3166 ns/op            1592 B/op         11 allocs/op
 
+goos: windows
+goarch: amd64
+pkg: github.com/ypcd/gstunnel/v6/gstunnellib/gspackoper
+cpu: 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz
+Benchmark_GetSha256_old-4           	  286828	      4061 ns/op	    3985 B/op	       7 allocs/op
+Benchmark_GetSha256_buf-4           	  371950	      3262 ns/op	    1361 B/op	       6 allocs/op
+Benchmark_GetSha256_pool-4          	  375138	      2746 ns/op	     145 B/op	       4 allocs/op
+Benchmark_GetSha256_nobuf-4         	  566928	      2735 ns/op	     145 B/op	       4 allocs/op
+Benchmark_GetSha256-4               	  388995	      2779 ns/op	     145 B/op	       4 allocs/op
 
 goos: darwin
 goarch: amd64
@@ -38,19 +47,19 @@ func init() {
 	po1.Data = GetRDBytes(1024)
 }
 
-func Benchmark_bytesjoin_old(b *testing.B) {
+func Benchmark_GetSha256_old(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		po1.GetSha256_old()
 	}
 }
 
-func Benchmark_bytesjoin_buf(b *testing.B) {
+func Benchmark_GetSha256_buf(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		po1.GetSha256_buf()
 	}
 }
 
-func Benchmark_bytesjoin_pool(b *testing.B) {
+func Benchmark_GetSha256_pool(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		po1.GetSha256_pool()
 	}
@@ -61,7 +70,13 @@ func Benchmark_bytesjoin_pool(b *testing.B) {
 	*/
 }
 
-func Benchmark_bytesjoin_gen(b *testing.B) {
+func Benchmark_GetSha256_nobuf(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		po1.GetSha256_nobuf()
+	}
+}
+
+func Benchmark_GetSha256(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		po1.GetSha256()
 	}

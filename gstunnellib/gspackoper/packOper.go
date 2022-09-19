@@ -3,7 +3,6 @@ package gspackoper
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 
 	//"gstunnellib"
@@ -46,28 +45,24 @@ type packOper struct {
 	PackOperPro
 }
 
-func GetSha256Hex(data []byte) string {
-	s1 := sha256.Sum256(data)
-	return hex.EncodeToString(
-		s1[:],
-	)
-}
-
 func GetSha256_32bytes(data []byte) [32]byte {
 	return sha256.Sum256(data)
 }
 
-func (po *packOper) GetSha256_old() [32]byte {
-	return GetSha256_32bytes(append(Intu8ToBytes(uint8(po.OperType)), append(po.OperData, append(po.Data, po.Rand...)...)...))
-}
-
-func (po *packOper) GetSha256() []byte {
-	v1 := po.GetSha256_buf()
-	//return hex.EncodeToString(v1[:])
+func (po *packOper) GetSha256_old() []byte {
+	v1 := GetSha256_32bytes(
+		append(
+			Intu8ToBytes(uint8(po.OperType)), append(po.OperData, append(po.Data, po.Rand...)...)...,
+		),
+	)
 	return v1[:]
 }
 
-//GetSha256_buf速度比GetSha256_old快15%-20%。
+func (po *packOper) GetSha256() []byte {
+	return po.GetSha256_nobuf()
+}
+
+// GetSha256_buf速度比GetSha256_old快15%-20%。
 func (po *packOper) GetSha256_buf() []byte {
 
 	var buf bytes.Buffer
@@ -79,14 +74,11 @@ func (po *packOper) GetSha256_buf() []byte {
 	sha := GetSha256_32bytes(buf.Bytes())
 
 	return sha[:]
-
 }
 
-//为了更好的安全性，默认情况下没有使用GetSha256_pool函数。
-//GetSha256_pool的速度比GetSha256_buf的速度快10%-15%。
-
+// 为了更好的安全性，默认情况下没有使用GetSha256_pool函数。
+// GetSha256_pool的速度比GetSha256_buf的速度快10%-15%。
 func (po *packOper) GetSha256_pool() []byte {
-
 	buf := bufPool.Get().(*bytes.Buffer)
 	defer bufPool.Put(buf)
 	buf.Reset()
@@ -99,12 +91,24 @@ func (po *packOper) GetSha256_pool() []byte {
 	h1 := GetSha256_32bytes(buf.Bytes())
 
 	return h1[:]
+}
 
+// GetSha256_nobuf的速度比GetSha256_buf的速度快18%-20%。
+func (po *packOper) GetSha256_nobuf() []byte {
+	hash := sha256.New()
+	vsha256 := make([]byte, 0, 32)
+
+	hash.Write(Intu8ToBytes(uint8(po.OperType)))
+	hash.Write(po.OperData)
+	hash.Write(po.Data)
+	hash.Write(po.Rand)
+
+	return hash.Sum(vsha256)
 }
 
 func (po *packOper) IsOk() error {
 	p1 := po
-	if p1.OperType < POBegin || p1.OperType > POEnd {
+	if p1.OperType <= POBegin || p1.OperType >= POEnd {
 		return errors.New("PackOper OperType is error.")
 	}
 
@@ -141,18 +145,16 @@ func IsPOGen(Data []byte) bool {
 	return (UnPack_Oper(Data).OperType == POGenOper)
 }
 
-func GetKey(Data []byte) []byte {
+func GetEncryKey(Data []byte) []byte {
 	return (UnPack_Oper(Data).OperData)
 }
 
 func createPackOperGen(data []byte) *packOper {
 
-	rd := GetRDCBytes(8)
-
 	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POGenOper,
 		Data:     data,
-		Rand:     rd,
+		Rand:     GetRDCBytes(8),
 	}}
 
 	pd.HashHex = pd.GetSha256()
@@ -161,14 +163,12 @@ func createPackOperGen(data []byte) *packOper {
 
 func createPackOperChangeKey() *packOper {
 
-	rd := GetRDCBytes(8)
-
 	key := GetRDBytes(32)
 
 	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POChangeCryKey,
 		OperData: []byte(key),
-		Rand:     rd,
+		Rand:     GetRDCBytes(8),
 	}}
 
 	pd.HashHex = pd.GetSha256()
@@ -242,8 +242,9 @@ func UnPack_Oper(data []byte) *packOper {
 	*/
 	data2 := data
 
-	proto.Unmarshal(data2, &msg.PackOperPro)
+	err := proto.Unmarshal(data2, &msg.PackOperPro)
 
+	_ = err
 	//msg.PackOperPro = msg2
 	if debug_tag {
 		p(msg)
@@ -257,7 +258,7 @@ func jsonUnPack_OperGen(data []byte) ([]byte, error) {
 
 	p1 := UnPack_Oper(data)
 
-	return p1.Data[:], p1.IsOk()
+	return p1.Data, p1.IsOk()
 }
 
 func JsonPacking(data []byte) []byte {
