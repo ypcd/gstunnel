@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"os"
 )
 
 /*
@@ -20,26 +21,14 @@ func isTheVersionConsistent_sendEx(dst net.Conn, apack GsPack, wlent *int64, Get
 			io.Copy(GetSendbuf, bytes.NewReader(buf))
 		}
 
-		//tmr.Boot()
-		//ChangeCryKey_Total += 1
-		//outf2.Write(buf)
-		for {
-			if len(buf) > 0 {
-				wlen, err := dst.Write(buf)
-				*wlent = *wlent + int64(wlen)
-				if wlen == 0 {
-					return errors.New("wlen == 0")
-				}
-				if err != nil && wlen <= 0 {
-					continue
-				}
-				if len(buf) == wlen {
-					break
-				}
-				buf = buf[wlen:]
-			} else {
-				break
-			}
+		wlen, err := io.Copy(dst, bytes.NewBuffer(buf))
+		*wlent += int64(wlen)
+		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
+			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
+			checkError(err)
+			return nil
+		} else {
+			checkError_exit(err)
 		}
 	}
 	return nil
@@ -59,23 +48,14 @@ func changeCryKey_sendEX(dst net.Conn, apack GsPack, ChangeCryKey_Total *int, wl
 	//tmr.Boot()
 	*ChangeCryKey_Total += 1
 	//outf2.Write(buf)
-	for {
-		if len(buf) > 0 {
-			wlen, err := dst.Write(buf)
-			*wlent = *wlent + int64(wlen)
-			if wlen == 0 {
-				return errors.New("wlen == 0")
-			}
-			if err != nil && wlen <= 0 {
-				continue
-			}
-			if len(buf) == wlen {
-				break
-			}
-			buf = buf[wlen:]
-		} else {
-			break
-		}
+	wlen, err := io.Copy(dst, bytes.NewBuffer(buf))
+	*wlent += int64(wlen)
+	if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
+		errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
+		checkError(err)
+		return nil
+	} else {
+		checkError_exit(err)
 	}
 	return nil
 }

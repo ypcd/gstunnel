@@ -2,9 +2,14 @@ package gspackoper
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+	"time"
 
 	"github.com/ypcd/gstunnel/v6/timerm"
 	"google.golang.org/protobuf/proto"
@@ -291,4 +296,26 @@ func Test_GetEncryKey(t *testing.T) {
 	if !bytes.Equal(key, key1) {
 		t.Error("key != key1.")
 	}
+}
+
+func Test_sha256_file(t *testing.T) {
+	fp1 := `C:\Users\user3\Downloads\gfx_win_101.3413_101.2111.exe`
+	//	fp2 := "C:\\Users\\user3\\Downloads\\WeChatSetup.exe"
+
+	t1 := time.Now()
+	f, err := os.Open(fp1)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	s2 := sha256.New()
+	_, err = io.Copy(s2, f)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	t2 := time.Now().Sub(t1)
+	fmt.Println("time milSec:", t2.Milliseconds())
+
+	fmt.Println(
+		hex.EncodeToString(s2.Sum([]byte{})),
+	)
 }

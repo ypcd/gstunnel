@@ -21,7 +21,17 @@ func Test_CheckError2(t *testing.T) {
 	//checkError(errors.New("123"))
 }
 
+func Test_CheckError_exit(t *testing.T) {
+	//checkError_exit(errors.New("Error test."))
+	//checkError(errors.New("123"))
+}
+
 func Test_Panic_Recover(t *testing.T) {
 	defer Panic_Recover(log.Default())
 	panic("Error.")
+}
+
+func Test_CheckError_info(t *testing.T) {
+	checkError_info(errors.New("Hello."))
+	//checkError(errors.New("123"))
 }

@@ -10,7 +10,7 @@ import (
 var logger *log.Logger
 
 func init() {
-	logger = gstunnellib.CreateFileLogger("GsTestPiPe.log")
+	logger = gstunnellib.NewFileLogger("GsTestPiPe.log")
 }
 
 func checkError(err error) {

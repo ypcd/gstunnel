@@ -1,3 +1,9 @@
+/*
+*
+*Open source agreement:
+*   The project is based on the GPLv3 protocol.
+*
+ */
 package main
 
 import (
@@ -7,21 +13,23 @@ import (
 	"io"
 	"net"
 	"os"
-	"time"
+	"sync/atomic"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
 	"github.com/ypcd/gstunnel/v6/timerm"
 )
 
 func srcTOdstUn_st(src net.Conn, dst net.Conn) {
-	//defer gstunnellib.Panic_Recover(Logger)
+	defer src.Close()
+	defer dst.Close()
 
-	tmr_out := timerm.CreateTimer(time.Second * 60)
-	//tmrP := timerm.CreateTimer(tmr_display_time)
+	defer gstunnellib.Panic_Recover(Logger)
+
+	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
-	//	recot_un_r := timerm.CreateRecoTime()
-	//	recot_un_w := timerm.CreateRecoTime()
+	//recot_un_r := timerm.CreateRecoTime()
+	//recot_un_w := timerm.CreateRecoTime()
 
 	apack := gstunnellib.NewGsPackNet(key)
 
@@ -33,27 +41,19 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 	var err error
 	_ = err
-	//outf, err := os.Create(fp1)
-	//checkError(err)
-	//outf2, err := os.Create(fp2)
-	//checkError(err)
 
-	defer src.Close()
-	defer dst.Close()
-	//defer outf.Close()
-	//defer outf2.Close()
-	var rbuf, wbuf []byte
-	rbuf = make([]byte, net_read_size)
-
-	var wlent, rlent uint64 = 0, 0
+	var rbuf []byte = make([]byte, net_read_size)
+	var wbuf []byte
+	var wlent, rlent int64
 
 	defer func() {
-		GRuntimeStatistics.AddSrcTotalNetData_recv(int(rlent))
-		GRuntimeStatistics.AddServerTotalNetData_send(int(wlent))
+		GRuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
+		GRuntimeStatistics.AddSrcTotalNetData_send(int(wlent))
 
-		if debug_server {
+		if debug_client {
 			fmt.Println("gorou exit.")
-			fmt.Printf("\tunpack trlen:%d  twlen:%d\n", rlent, wlent)
+			fmt.Printf("\tunpack  trlen:%d  twlen:%d\n", rlent, wlent)
+			fmt.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
 			//	fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
 			//	fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
@@ -70,7 +70,10 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 		} else {
 			checkError(err)
 		}
-		rlent += uint64(rlen)
+
+		pf("trlen:%d  rlen:%d\n", rlent, rlen)
+
+		rlent += int64(rlen)
 
 		if tmr_out.Run() {
 			Logger.Println("Error: Time out, func exit.")
@@ -84,6 +87,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 			Logger.Println("Error:", err)
 			continue
 		}
+
 		tmr_out.Boot()
 
 		apack.WriteEncryData(rbuf[:rlen])
@@ -91,7 +95,7 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 		checkError(err)
 		if len(wbuf) > 0 {
 			rn, err := io.Copy(dst, bytes.NewBuffer(wbuf))
-			wlent += uint64(rn)
+			wlent += rn
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.EOF) {
 				checkError_NoExit(err)
 				return
@@ -100,11 +104,13 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 			}
 		}
 
-		if tmrP2.Run() && debug_server {
-			fmt.Printf("unpack trlen:%d  twlen:%d\n", rlent, wlent)
+		if tmrP2.Run() && debug_client {
+			fmt.Printf("unpack  trlen:%d  twlen:%d\n", rlent, wlent)
+			fmt.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
 			//	fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
 			//	fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 	}
+
 }

@@ -39,7 +39,7 @@ func init() {
 	debug_tag = false
 	p = Nullprint
 
-	logger = CreateFileLogger("gstunnellib.log")
+	logger = NewFileLogger("gstunnellib.log")
 	//debug_tag = true
 	//p = fmt.Println
 

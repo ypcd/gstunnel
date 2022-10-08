@@ -47,6 +47,8 @@ var networkTimeout time.Duration = time.Minute * 1
 
 var GRuntimeStatistics gstunnellib.Runtime_statistics
 
+var log_List gstunnellib.Logger_List
+
 //var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
 //var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
 
@@ -54,7 +56,10 @@ func init() {
 
 	GRuntimeStatistics = gstunnellib.NewRuntimeStatistics()
 
-	Logger = gstunnellib.CreateFileLogger("gstunnel_server.log")
+	log_List.GenLogger = gstunnellib.NewFileLogger("gstunnel_server.log")
+	log_List.GSIpLogger = gstunnellib.NewFileLogger("GSClient_Ip.log")
+
+	Logger = log_List.GenLogger
 
 	Logger.Println("gstunnel server.")
 
@@ -102,15 +107,8 @@ func run() {
 
 	var lstnaddr, connaddr string
 
-	if len(os.Args) == 4 {
-		lstnaddr = os.Args[1]
-		connaddr = os.Args[2]
-		key = os.Args[3]
-	} else {
-		lstnaddr = gsconfig.Listen
-		connaddr = gsconfig.GetServer_rand()
-		key = gsconfig.Key
-	}
+	lstnaddr = gsconfig.Listen
+	connaddr = gsconfig.GetServer_rand()
 
 	fmt.Println("Listen_Addr:", lstnaddr)
 	fmt.Println("Conn_Addr:", connaddr)
@@ -128,6 +126,7 @@ func run() {
 			checkError_NoExit(err)
 			continue
 		}
+		log_List.GSIpLogger.Printf("Gstunnel client ip: %s\n", acc.RemoteAddr().String())
 
 		service := connaddr
 		//tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
@@ -143,11 +142,14 @@ func run() {
 	}
 }
 
-func run_pipe_test(ss gstestpipe.Service_server, gsc gstestpipe.GsClient) {
+func run_pipe_test(ss gstestpipe.RawdataPiPe, gsc gstestpipe.GsPiPe) {
 	defer gstunnellib.Panic_Recover(Logger)
 
-	acc := gsc.GetServerConn()
+	acc := gsc.GetConn()
 	dst := ss.GetClientConn()
+
+	Logger.Println("Test_Mt_model:", Mt_model)
+	log_List.GSIpLogger.Printf("Gstunnel client ip: %s\n", acc.RemoteAddr().String())
 
 	go srcTOdstUn(acc, dst)
 	go srcTOdstP(dst, acc)
@@ -191,4 +193,8 @@ func checkError(err error) {
 
 func checkError_NoExit(err error) {
 	gstunnellib.CheckErrorEx(err, Logger)
+}
+
+func checkError_info(err error) {
+	gstunnellib.CheckErrorEx_info(err, Logger)
 }

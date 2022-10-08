@@ -14,8 +14,8 @@ import (
 
 var key_defult string = "1234567890123456"
 
-type GsClient interface {
-	GetServerConn() net.Conn
+type GsPiPe interface {
+	GetConn() net.Conn
 }
 
 type gsClientImp struct {
@@ -23,15 +23,15 @@ type gsClientImp struct {
 	key      string
 }
 
-func NewGsClient(key string) GsClient {
+func NewGsPiPe(key string) GsPiPe {
 	return &gsClientImp{key: key}
 }
 
-func NewGsClientDefultKey() GsClient {
+func NewGsPiPeDefultKey() GsPiPe {
 	return &gsClientImp{key: key_defult}
 }
 
-func (gc *gsClientImp) GetServerConn() net.Conn {
+func (gc *gsClientImp) GetConn() net.Conn {
 	if gc.connList != nil {
 		return gc.connList.server
 	}
@@ -40,17 +40,20 @@ func (gc *gsClientImp) GetServerConn() net.Conn {
 	go func(gc *gsClientImp, pp *pipe_conn) {
 		buf := make([]byte, 2*1024)
 		var rbuf, wbuf []byte
-		//var rpackbuf []byte
+		var readSize, writeSize int64 = 0, 0
 
 		apacknetRead := gstunnellib.NewGsPackNet(gc.key)
 		apacknetWrite := gstunnellib.NewGsPackNet(gc.key)
 		for {
 			rbuf = buf
 			re, err := pp.client.Read(rbuf)
-			checkError(err)
-			if err != nil {
+			readSize += int64(re)
+			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) ||
+				errors.Is(err, io.EOF) {
+				checkError(err)
 				return
 			}
+			checkError_exit(err)
 
 			apacknetRead.WriteEncryData(rbuf[:re])
 			wbuf, err = apacknetRead.GetDecryData()
@@ -60,8 +63,10 @@ func (gc *gsClientImp) GetServerConn() net.Conn {
 				if gsbase.Deep_debug {
 					logger.Println("gsclient packing data hash:", gshash.GetSha256Hex(wbuf))
 				}
-				_, err := io.Copy(pp.client, bytes.NewBuffer(wbuf))
-				if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.EOF) {
+				rn, err := io.Copy(pp.client, bytes.NewBuffer(wbuf))
+				writeSize += rn
+				if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) ||
+					errors.Is(err, io.EOF) {
 					checkError(err)
 					return
 				} else {

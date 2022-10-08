@@ -155,11 +155,6 @@ func newAesPack(key string) *aespack {
 }
 
 func NewGsPack(key string) GsPack {
-	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
-		checkError_exit(errors.New("Error: The key is not 16, 24, or 32 bytes."))
-	}
-	ap1 := aespack{}
-	ap1.a = createAes([]byte(key))
-
-	return &ap1
+	ap1 := newAesPack(key)
+	return ap1
 }

@@ -1,3 +1,9 @@
+/*
+*
+*Open source agreement:
+*   The project is based on the GPLv3 protocol.
+*
+ */
 package main
 
 import (
@@ -7,7 +13,7 @@ import (
 	"io"
 	"net"
 	"os"
-	"time"
+	"sync/atomic"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
 	"github.com/ypcd/gstunnel/v6/timerm"
@@ -16,14 +22,13 @@ import (
 func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	defer gstunnellib.Panic_Recover(Logger)
 
-	tmr_out := timerm.CreateTimer(time.Second * 60)
-	//tmrP := timerm.CreateTimer(tmr_display_time)
+	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
 	tmr_changekey := timerm.CreateTimer(tmr_changekey_time)
 
-	//	recot_p_r := timerm.CreateRecoTime()
-	//	recot_p_w := timerm.CreateRecoTime()
+	//recot_p_r := timerm.CreateRecoTime()
+	//recot_p_w := timerm.CreateRecoTime()
 
 	apack := gstunnellib.NewGsPack(key)
 
@@ -36,15 +41,10 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	var err error
 	_ = err
 
-	//outf, err := os.Create(fp1)
-	//checkError(err)
-	//outf2, err := os.Create(fp2)
-	//checkError(err)
 	defer src.Close()
 	defer dst.Close()
-	//defer outf.Close()
-	//defer outf2.Close()
-	buf := make([]byte, net_read_size)
+
+	var buf []byte = make([]byte, net_read_size)
 	var rbuf []byte = buf
 	var wbuf bytes.Buffer
 
@@ -53,17 +53,17 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	ChangeCryKey_Total := 0
 
 	defer func() {
-		GRuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
-		GRuntimeStatistics.AddSrcTotalNetData_send(int(wlent))
+		GRuntimeStatistics.AddSrcTotalNetData_recv(int(rlent))
+		GRuntimeStatistics.AddServerTotalNetData_send(int(wlent))
 
-		if debug_server {
+		if debug_client {
 			fmt.Println("gorou exit.")
 			fmt.Printf("\tpack  trlen:%d  twlen:%d\n", rlent, wlent)
-			//fmt.Println("goPackTotal:", goPackTotal)
+			fmt.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
 			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
 
-			//	fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
-			//	fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
+			//fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
+			//fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 		}
 	}()
 
@@ -77,18 +77,18 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		Logger.Println("Error:", err)
 		return
 	}
-
 	for {
 		buf = rbuf
-		//	recot_p_r.Run()
-		rlen, err := src.Read(rbuf)
-		//	recot_p_r.Run()
+		//recot_p_r.Run()
+		rlen, err := src.Read(buf)
+		//recot_p_r.Run()
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 			checkError_info(err)
 		} else {
 			checkError(err)
 		}
+
 		rlent += int64(rlen)
 
 		if tmr_out.Run() {
@@ -104,10 +104,9 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 			continue
 		}
 
-		//outf.Write(buf[:rlen])
 		tmr_out.Boot()
-		//rbuf = buf
-		buf = rbuf[:rlen]
+		rbuf = buf
+		buf = buf[:rlen]
 
 		wbuf.Reset()
 		_, err = wbuf.Write(buf)
@@ -116,13 +115,8 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 			return
 		}
 		buf = nil
-		//wbuf = append(wbuf, buf...)
-		//fre := bool(len(wbuf) > 0)
 
 		if wbuf.Len() > 0 {
-			if debug_server {
-				gstunnellib.RunTimeDebugInfoV1.AddPackingPackSizeList("server_srcToDstP_st_packing len", wbuf.Len())
-			}
 			buf = apack.Packing(wbuf.Bytes())
 			//wbuf = wbuf[len(wbuf):]
 			//outf2.Write(buf)
@@ -149,13 +143,14 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 			}
 		}
 		buf = rbuf
-		if tmrP2.Run() && debug_server {
+		if tmrP2.Run() && debug_client {
+
 			fmt.Printf("pack  trlen:%d  twlen:%d\n", rlent, wlent)
-			//fmt.Println("goPackTotal:", goPackTotal)
+			fmt.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
 			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
 
-			//	fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
-			//	fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
+			//fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
+			//fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 
 		}
 

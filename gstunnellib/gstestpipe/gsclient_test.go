@@ -13,8 +13,8 @@ import (
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
 
-func Test_GsClientImp(t *testing.T) {
-	gc := NewGsClientDefultKey()
+func Test_GsPiPeImp(t *testing.T) {
+	gc := NewGsPiPeDefultKey()
 	wg := sync.WaitGroup{}
 
 	SendData := gsrand.GetRDBytes(1024 * 1024)
@@ -24,8 +24,7 @@ func Test_GsClientImp(t *testing.T) {
 	//rbuff := bytes.Buffer{}
 	apack := gstunnellib.NewGsPackNet(key_defult)
 
-	server := gc.GetServerConn()
-
+	server := gc.GetConn()
 	wg.Add(1)
 	go func(server net.Conn) {
 		defer wg.Done()
