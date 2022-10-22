@@ -13,10 +13,10 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
-	"github.com/ypcd/gstunnel/v6/gstunnellib/gstestpipe"
 )
 
 const version string = gstunnellib.Version
@@ -103,7 +103,7 @@ func main() {
 }
 
 func run() {
-	defer gstunnellib.Panic_Recover(Logger)
+	//defer gstunnellib.Panic_Recover(Logger)
 
 	var lstnaddr, connaddr string
 
@@ -142,11 +142,8 @@ func run() {
 	}
 }
 
-func run_pipe_test(ss gstestpipe.RawdataPiPe, gsc gstestpipe.GsPiPe) {
-	defer gstunnellib.Panic_Recover(Logger)
-
-	acc := gsc.GetConn()
-	dst := ss.GetClientConn()
+func run_pipe_test(dst net.Conn, acc net.Conn) {
+	//defer gstunnellib.Panic_Recover(Logger)
 
 	Logger.Println("Test_Mt_model:", Mt_model)
 	log_List.GSIpLogger.Printf("Gstunnel client ip: %s\n", acc.RemoteAddr().String())
@@ -157,8 +154,17 @@ func run_pipe_test(ss gstestpipe.RawdataPiPe, gsc gstestpipe.GsPiPe) {
 
 }
 
-func find0(v1 []byte) (int, bool) {
-	return gstunnellib.Find0(v1)
+func run_pipe_test_wg(dst net.Conn, acc net.Conn, wg *sync.WaitGroup) {
+	//defer gstunnellib.Panic_Recover(Logger)
+
+	Logger.Println("Test_Mt_model:", Mt_model)
+	log_List.GSIpLogger.Printf("Gstunnel client ip: %s\n", acc.RemoteAddr().String())
+
+	wg.Add(2)
+	go srcTOdstUn_wg(acc, dst, wg)
+	go srcTOdstP_wg(dst, acc, wg)
+	Logger.Println("Gstunnel go.")
+
 }
 
 func IsTheVersionConsistent_send(dst net.Conn, apack gstunnellib.GsPack, wlent *int64) error {
@@ -187,6 +193,26 @@ func srcTOdstUn(src net.Conn, dst net.Conn) {
 	}
 }
 
+// service to gstunnel client
+func srcTOdstP_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if Mt_model {
+		srcTOdstP_mt(src, dst)
+	} else {
+		srcTOdstP_st(src, dst)
+	}
+}
+
+// gstunnel client to service
+func srcTOdstUn_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if Mt_model {
+		srcTOdstUn_mt(src, dst)
+	} else {
+		srcTOdstUn_st(src, dst)
+	}
+}
+
 func checkError(err error) {
 	gstunnellib.CheckErrorEx_exit(err, Logger)
 }
@@ -197,4 +223,8 @@ func checkError_NoExit(err error) {
 
 func checkError_info(err error) {
 	gstunnellib.CheckErrorEx_info(err, Logger)
+}
+
+func checkError_panic(err error) {
+	gstunnellib.CheckErrorEx_panic(err, Logger)
 }

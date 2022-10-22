@@ -68,15 +68,10 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	}()
 
 	err = IsTheVersionConsistent_send(dst, apack, &wlent)
-	if err != nil {
-		Logger.Println("Error:", err)
-		return
-	}
+	checkError_panic(err)
+
 	err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
-	if err != nil {
-		Logger.Println("Error:", err)
-		return
-	}
+	checkError_panic(err)
 
 	for {
 		buf = rbuf
@@ -120,8 +115,8 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		//fre := bool(len(wbuf) > 0)
 
 		if wbuf.Len() > 0 {
-			if debug_server {
-				gstunnellib.RunTimeDebugInfoV1.AddPackingPackSizeList("server_srcToDstP_st_packing len", wbuf.Len())
+			if gstunnellib.RunTime_Debug {
+				gstunnellib.RunTimeDebugInfo1.AddPackingPackSizeList("server_srcToDstP_st_packing len", wbuf.Len())
 			}
 			buf = apack.Packing(wbuf.Bytes())
 			//wbuf = wbuf[len(wbuf):]

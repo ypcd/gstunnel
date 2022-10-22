@@ -20,7 +20,7 @@ import (
 )
 
 func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
-	defer gstunnellib.Panic_Recover(Logger)
+	//defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -112,7 +112,7 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 }
 
 func srcTOdstUn_w(dst net.Conn, dst_chan chan []byte, dst_ok *gstunnellib.Gorou_status) {
-	defer gstunnellib.Panic_Recover(Logger)
+	//defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 

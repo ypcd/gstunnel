@@ -10,7 +10,7 @@ import (
 
 func Test_IsTheVersionConsistent_sendEx(t *testing.T) {
 	con1, con2 := net.Pipe()
-	ap1 := NewGsPack("1234567890123456")
+	ap1 := NewGsPack("12345678901234567890123456789012")
 	wlent := int64(0)
 	recvbuf := bytes.Buffer{}
 	var GetSendbuf bytes.Buffer
@@ -31,7 +31,7 @@ func Test_IsTheVersionConsistent_sendEx(t *testing.T) {
 
 func Test_ChangeCryKey_sendEX(t *testing.T) {
 	con1, con2 := net.Pipe()
-	ap1 := NewGsPack("1234567890123456")
+	ap1 := NewGsPack("12345678901234567890123456789012")
 	wlent := int64(0)
 	recvbuf := bytes.Buffer{}
 	var GetSendbuf bytes.Buffer

@@ -31,6 +31,6 @@ func (a *gsaes) encrypter(data []byte) []byte {
 
 func (a *gsaes) decrypter(data []byte) []byte {
 	decry, err := a.gcm.Open(nil, commonIV, data, nil)
-	checkError_exit(err)
+	checkError_panic(err)
 	return decry
 }

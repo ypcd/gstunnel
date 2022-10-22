@@ -12,10 +12,15 @@ import (
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gshash"
 )
 
-var key_defult string = "1234567890123456"
+var key_defult string = "12345678901234567890123456789012"
 
 type GsPiPe interface {
 	GetConn() net.Conn
+}
+
+type GsPiPeErrorKey interface {
+	GetClientConn() net.Conn
+	GetServerConn() net.Conn
 }
 
 type gsClientImp struct {
@@ -28,6 +33,14 @@ func NewGsPiPe(key string) GsPiPe {
 }
 
 func NewGsPiPeDefultKey() GsPiPe {
+	return &gsClientImp{key: key_defult}
+}
+
+func NewGsPiPeErrorKey(key string) GsPiPeErrorKey {
+	return &gsClientImp{key: key}
+}
+
+func NewGsPiPeErrorKeyDefultKey() GsPiPeErrorKey {
 	return &gsClientImp{key: key_defult}
 }
 
@@ -50,7 +63,8 @@ func (gc *gsClientImp) GetConn() net.Conn {
 			readSize += int64(re)
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) ||
 				errors.Is(err, io.EOF) {
-				checkError(err)
+				checkError_info(err)
+				logger.Printf("gsclient readSize:%d  writeSize:%d\n", readSize, writeSize)
 				return
 			}
 			checkError_exit(err)
@@ -67,7 +81,7 @@ func (gc *gsClientImp) GetConn() net.Conn {
 				writeSize += rn
 				if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) ||
 					errors.Is(err, io.EOF) {
-					checkError(err)
+					checkError_info(err)
 					return
 				} else {
 					checkError_exit(err)
@@ -76,5 +90,21 @@ func (gc *gsClientImp) GetConn() net.Conn {
 		}
 	}(gc, gc.connList)
 
+	return gc.connList.server
+}
+
+func (gc *gsClientImp) GetClientConn() net.Conn {
+	if gc.connList != nil {
+		return gc.connList.client
+	}
+	gc.connList = newPipeConn()
+	return gc.connList.client
+}
+
+func (gc *gsClientImp) GetServerConn() net.Conn {
+	if gc.connList != nil {
+		return gc.connList.server
+	}
+	gc.connList = newPipeConn()
 	return gc.connList.server
 }

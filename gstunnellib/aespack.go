@@ -51,13 +51,13 @@ func (ap *aespack) Unpack(data []byte) ([]byte, error) {
 			if ix == (len(data) - 1) {
 				data = data[:ix]
 			} else {
-				checkError_exit(errors.New("Data is error."))
+				checkError_panic(errors.New("Data is error."))
 			}
 		}
 
 		dedata := make([]byte, base64.StdEncoding.DecodedLen(len(data)))
 		re, err := base64.StdEncoding.Decode(dedata, data)
-		checkError_exit(err)
+		checkError_panic(err)
 		dedata = dedata[:re]
 		logger.Println("aespack unpack base64 decode hash:", gshash.GetSha256Hex(dedata))
 
@@ -70,13 +70,13 @@ func (ap *aespack) Unpack(data []byte) ([]byte, error) {
 			if ix == (len(data) - 1) {
 				data = data[:ix]
 			} else {
-				checkError_exit(errors.New("Data is error."))
+				checkError_panic(errors.New("Data is error."))
 			}
 		}
 
 		dedata := make([]byte, base64.StdEncoding.DecodedLen(len(data)))
 		re, err := base64.StdEncoding.Decode(dedata, data)
-		checkError_exit(err)
+		checkError_panic(err)
 		dedata = dedata[:re]
 
 		jdata = ap.a.decrypter(dedata)
@@ -145,8 +145,8 @@ func (ap *aespack) IsTheVersionConsistent() []byte {
 }
 
 func newAesPack(key string) *aespack {
-	if len(key) != 16 && len(key) != 24 && len(key) != 32 {
-		checkError_exit(errors.New("Error: The key is not 16, 24, or 32 bytes."))
+	if len(key) != 32 {
+		checkError_exit(errors.New("Error: The key is not 32 bytes."))
 	}
 	ap1 := aespack{}
 	ap1.a = createAes([]byte(key))

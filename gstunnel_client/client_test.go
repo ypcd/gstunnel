@@ -8,20 +8,26 @@ import (
 )
 
 func Test_server_NetPipe_st(t *testing.T) {
-	defer gstunnellib.RunTimeDebugInfoV1.WriteFile("debugInfo.json")
+	if gstunnellib.RunTime_Debug {
+		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	}
 	logger_test.Println("[Test_server_NetPipe_st] start.")
 	inTest_server_NetPipe(t, false)
 	logger_test.Println("[Test_server_NetPipe_st] end.")
 }
 func Test_server_NetPipe_mt(t *testing.T) {
-	defer gstunnellib.RunTimeDebugInfoV1.WriteFile("debugInfo.json")
+	if gstunnellib.RunTime_Debug {
+		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	}
 	logger_test.Println("[Test_server_NetPipe_mt] start.")
 	inTest_server_NetPipe(t, true)
 	logger_test.Println("[Test_server_NetPipe_mt] end.")
 }
 
 func Test_server_NetPipe_m(t *testing.T) {
-	defer gstunnellib.RunTimeDebugInfoV1.WriteFile("debugInfo.json")
+	if gstunnellib.RunTime_Debug {
+		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	}
 	logger_test.Println("[Test_server_NetPipe] start.")
 	//inTest_server_NetPipe_m(t)
 	gwg := sync.WaitGroup{}

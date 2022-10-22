@@ -100,7 +100,7 @@ func main() {
 }
 
 func run() {
-	defer gstunnellib.Panic_Recover(Logger)
+	//defer gstunnellib.Panic_Recover(Logger)
 
 	var lstnaddr string
 	var connaddr []string
@@ -162,7 +162,7 @@ func run() {
 }
 
 func run_pipe_test(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe) {
-	defer gstunnellib.Panic_Recover(Logger)
+	//defer gstunnellib.Panic_Recover(Logger)
 
 	acc := sc.GetServerConn()
 	dst := gss.GetConn()

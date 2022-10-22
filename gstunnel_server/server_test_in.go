@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gstestpipe"
 )
 
@@ -66,7 +67,7 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	testReadTimeOut := time.Second * 1
 	testCacheSize := 300 * 1024 * 1024
 
-	run_pipe_test(ss, gsc)
+	run_pipe_test(ss.GetClientConn(), gsc.GetConn())
 
 	wg := sync.WaitGroup{}
 
@@ -126,6 +127,80 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	//time.Sleep(time.Second * 60)
 }
 
+func inTest_server_NetPipe_errorData(t *testing.T, mt_mode bool) {
+	logger_test.Println("[inTest_server_NetPipe] start.")
+	ss := gstestpipe.NewServiceServerNone()
+	gsc := gstestpipe.NewGsPiPeErrorKeyDefultKey()
+
+	networkTimeout = time.Minute * 20
+	Mt_model = mt_mode
+	debug_server = true
+
+	//testReadTimeOut := time.Second * 1
+	testCacheSize := 300 * 1024 * 1024
+
+	wg := new(sync.WaitGroup)
+	run_pipe_test_wg(ss.GetClientConn(), gsc.GetServerConn(), wg)
+
+	//wg := sync.WaitGroup{}
+
+	//server := ss.GetServerConn()
+
+	SendData := GetRDBytes_local(1024 * 1024 * 10)
+	//SendData := []byte("123456")
+	//rbuf := make([]byte, 0, len(SendData))
+	//rbuff := bytes.Buffer{}
+	logger_test.Println("testCacheSize[MiB]:", testCacheSize/1024/1024)
+
+	logger_test.Println("inTest_server_NetPipe data transfer start.")
+
+	///////////////////////////////////////////////////////////////////////////
+	_, err := io.Copy(gsc.GetClientConn(), bytes.NewBuffer(SendData))
+	checkError_NoExit(err)
+
+	//////////////////////////////////////////////////////////////////////////
+	wg.Wait()
+}
+
+func inTest_server_NetPipe_errorKey(t *testing.T, mt_mode bool) {
+	logger_test.Println("[inTest_server_NetPipe] start.")
+	ss := gstestpipe.NewServiceServerNone()
+	key_error := "123456789012345678901234567890aa"
+	gsc := gstestpipe.NewGsPiPeErrorKey(key_error)
+
+	networkTimeout = time.Minute * 20
+	Mt_model = mt_mode
+	debug_server = true
+
+	//testReadTimeOut := time.Second * 1
+	testCacheSize := 300 * 1024 * 1024
+
+	wg := new(sync.WaitGroup)
+	run_pipe_test_wg(ss.GetClientConn(), gsc.GetServerConn(), wg)
+
+	//wg := sync.WaitGroup{}
+
+	//server := ss.GetServerConn()
+
+	//SendData := GetRDBytes_local(testCacheSize)
+	//SendData := []byte("123456")
+	//rbuf := make([]byte, 0, len(SendData))
+	//rbuff := bytes.Buffer{}
+	logger_test.Println("testCacheSize[MiB]:", testCacheSize/1024/1024)
+
+	logger_test.Println("inTest_server_NetPipe data transfer start.")
+
+	///////////////////////////////////////////////////////////////////////////
+	pack1 := gstunnellib.NewGsPackNet(key_error)
+	pdata := pack1.Packing(gsrand.GetRDBytes(1024 * 1024 * 10))
+	_, err := io.Copy(gsc.GetClientConn(), bytes.NewBuffer(pdata))
+	checkError_NoExit(err)
+
+	wg.Wait()
+	//////////////////////////////////////////////////////////////////////////
+
+}
+
 func inTest_server_NetPipe_go_init() {
 	networkTimeout = time.Minute * 20
 	Mt_model = true
@@ -142,7 +217,7 @@ func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	testReadTimeOut := time.Second * 1
 	testCacheSize := 100 * 1024 * 1024
 
-	run_pipe_test(ss, gsc)
+	run_pipe_test(ss.GetClientConn(), gsc.GetConn())
 
 	wg := sync.WaitGroup{}
 

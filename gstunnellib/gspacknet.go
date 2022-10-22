@@ -42,7 +42,7 @@ func (pn *gsPackNetImp) GetDecryData() ([]byte, error) {
 		pn.buf = pn.buf[rn+1:]
 
 		wbuf, err := pn.apack.Unpack(wbuf)
-		checkError_exit(err)
+		checkError_panic(err)
 		return wbuf, nil
 	} else {
 		return nil, nil

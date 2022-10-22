@@ -14,7 +14,7 @@ import (
 )
 
 func srcTOdstUn_st(src net.Conn, dst net.Conn) {
-	//defer gstunnellib.Panic_Recover(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(time.Second * 60)
 	//tmrP := timerm.CreateTimer(tmr_display_time)

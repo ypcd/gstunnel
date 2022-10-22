@@ -14,6 +14,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -344,7 +345,7 @@ func Test_GsPack(t *testing.T) {
 	a1 := NewGsPack("5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ")
 
 	tmp := a1.Packing(fbuf)
-	t.Log(tmp[len(tmp)-3 : len(tmp)])
+	t.Log(tmp[len(tmp)-3:])
 	outbuf, _ := a1.Unpack(tmp)
 
 	if getsha1(fbuf) == getsha1(outbuf) {
@@ -388,7 +389,7 @@ func Test_pack_type_size(t *testing.T) {
 }
 
 func Test_gspack_pack_unpack_run_m(t *testing.T) {
-	pn := NewGsPack("1234567890123456")
+	pn := NewGsPack("12345678901234567890123456789012")
 	rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(1024 * 1024)))
 	encrydata := pn.Packing(rawdata)
 
@@ -402,11 +403,15 @@ func Test_gspack_pack_unpack_run_m(t *testing.T) {
 }
 
 func Test_gspacknet_pack_unpack_2(t *testing.T) {
-	pn := NewGsPack("1234567890123456")
-	//rawdata := []byte("123456")
-	encrydata := "yfvjjXJk45dmEXRqliNEZLUriT3NoIzXdoOG5yQlYAr1vocb5fks5rqdgUT5Ae9ZTakd+cTam2iR63fHAm/AwjptKHyurA==\x00"
+	pn := NewGsPack("12345678901234567890123456789012")
+	rawdata := GetRDBytes(1024 * 1024)
+	encrydata := pn.Packing(rawdata)
 
-	pn.Unpack([]byte(encrydata))
+	decrydata, err := pn.Unpack([]byte(encrydata))
+	checkError_exit(err)
+	if !bytes.Equal(rawdata, decrydata) {
+		checkError_exit(errors.New("Rawdata != decrydata."))
+	}
 }
 
 func Test_base64_bytes(t *testing.T) {

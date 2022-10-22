@@ -27,10 +27,11 @@ var logger *log.Logger
 const Info_protobuf bool = true
 
 const Deep_debug = gsbase.Deep_debug
+const RunTime_Debug = gsbase.RunTime_Debug
 
-var RunTimeDebugInfoV1 RunTimeDebugInfo
+var RunTimeDebugInfo1 RunTimeDebugInfo
 
-var key_defult string = "1234567890123456"
+var key_defult string = "12345678901234567890123456789012"
 
 func Nullprint(v ...interface{}) (int, error)                       { return 1, nil }
 func Nullprintf(format string, a ...interface{}) (n int, err error) { return 1, nil }
@@ -42,6 +43,7 @@ func init() {
 	logger = NewFileLogger("gstunnellib.log")
 	//debug_tag = true
 	//p = fmt.Println
-
-	RunTimeDebugInfoV1 = NewRunTimeDebugInfo()
+	if RunTime_Debug {
+		RunTimeDebugInfo1 = NewRunTimeDebugInfo()
+	}
 }

@@ -28,7 +28,7 @@ func Test_CheckError_exit(t *testing.T) {
 
 func Test_Panic_Recover(t *testing.T) {
 	defer Panic_Recover(log.Default())
-	panic("Error.")
+	panic("An exception occurred.")
 }
 
 func Test_CheckError_info(t *testing.T) {

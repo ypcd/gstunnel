@@ -32,3 +32,7 @@ func CheckError_test(err error, t *testing.T) {
 func CheckError_test_noExit(err error, t *testing.T) {
 	gstunnellib.CheckError_test_noExit(err, t)
 }
+
+func checkError_info(err error) {
+	gstunnellib.CheckErrorEx_info(err, logger)
+}

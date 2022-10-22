@@ -126,7 +126,7 @@ Mt_model           	是否在主逻辑模块开启多协程模式（true或false
 ```
 配置文件示例：
 
-{"listen": "127.0.0.1:33128", "servers": ["127.0.0.1:10036"], "key": "1234567890123456"}
+{"listen": "127.0.0.1:33128", "servers": ["127.0.0.1:10036"], "key": "12345678901234567890123456789012"}
 
 listen:		监听地址
 servers:	目标地址
@@ -275,7 +275,7 @@ Mt_model Whether to enable multi-coroutine mode in the main logic module (true o
 ```
 Example configuration file:
 
-{"listen": "127.0.0.1:33128", "servers": ["127.0.0.1:10036"], "key": "1234567890123456"}
+{"listen": "127.0.0.1:33128", "servers": ["127.0.0.1:10036"], "key": "12345678901234567890123456789012"}
 
 listen: listening address
 servers: destination address
@@ -291,17 +291,17 @@ for example:
 
 Linux bash:
 
-user@ubuntu:~$ ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 "1234567890123456"
+user@ubuntu:~$ ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 "12345678901234567890123456789012"
 
-user@ubuntu:~$ ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
+user@ubuntu:~$ ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 "12345678901234567890123456789012"
 
 Note: Please ensure that the client is an executable file in the Linux system. Whether it is an executable file, please check the file attributes of the client file.
 
 Windows cmd:
 
-C:> ./gstunnel_client.exe 127.0.0.1:3128 1.2.3.4:43210 "1234567890123456"
+C:> ./gstunnel_client.exe 127.0.0.1:3128 1.2.3.4:43210 "12345678901234567890123456789012"
 
-C:> ./gstunnel_server.exe 1.2.3.4:43210 1.2.3.4:3128 "1234567890123456"
+C:> ./gstunnel_server.exe 1.2.3.4:43210 1.2.3.4:3128 "12345678901234567890123456789012"
 
 Log
 

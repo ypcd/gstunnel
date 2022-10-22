@@ -5,12 +5,12 @@ import (
 )
 
 func Test_GsConfig(t *testing.T) {
-	gs := CreateGsconfig("config.client.json")
+	gs := CreateGsconfig("config.test.json")
 	t.Log(gs)
 }
 
 func Test_GsConfig_getserver(t *testing.T) {
-	gs := CreateGsconfig("config3.client.json")
+	gs := CreateGsconfig("config3.test.json")
 	t.Log(gs)
 	re := gs.GetServers()
 	t.Log(re)

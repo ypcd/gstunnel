@@ -20,7 +20,7 @@ import (
 )
 
 func srcTOdstP_st(src net.Conn, dst net.Conn) {
-	defer gstunnellib.Panic_Recover(Logger)
+	//defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)

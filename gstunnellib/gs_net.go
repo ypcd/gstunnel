@@ -25,8 +25,8 @@ func isTheVersionConsistent_sendEx(dst net.Conn, apack GsPack, wlent *int64, Get
 		*wlent += int64(wlen)
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
-			checkError(err)
-			return nil
+			checkError_panic(err)
+			return err
 		} else {
 			checkError_exit(err)
 		}
@@ -52,8 +52,8 @@ func changeCryKey_sendEX(dst net.Conn, apack GsPack, ChangeCryKey_Total *int, wl
 	*wlent += int64(wlen)
 	if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 		errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
-		checkError(err)
-		return nil
+		checkError_panic(err)
+		return err
 	} else {
 		checkError_exit(err)
 	}
