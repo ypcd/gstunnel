@@ -57,7 +57,8 @@ func init() {
 	GRuntimeStatistics = gstunnellib.NewRuntimeStatistics()
 
 	log_List.GenLogger = gstunnellib.NewFileLogger("gstunnel_server.log")
-	log_List.GSIpLogger = gstunnellib.NewFileLogger("GSClient_Ip.log")
+	log_List.GSIpLogger = gstunnellib.NewFileLogger("access.log")
+	log_List.GSIpLogger.Println("Gstunnel client access ip list:")
 
 	Logger = log_List.GenLogger
 
@@ -90,9 +91,9 @@ func init() {
 		}()
 		Logger.Println("pprof server listen: localhost:6070")
 	}
-	debug_server = false
+	//debug_server = false
 
-	go gstunnellib.RunGRuntimeStatistics_print(Logger, GRuntimeStatistics)
+	//go gstunnellib.RunGRuntimeStatistics_print(Logger, GRuntimeStatistics)
 
 }
 
@@ -126,7 +127,7 @@ func run() {
 			checkError_NoExit(err)
 			continue
 		}
-		log_List.GSIpLogger.Printf("Gstunnel client ip: %s\n", acc.RemoteAddr().String())
+		log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
 
 		service := connaddr
 		//tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
@@ -146,7 +147,7 @@ func run_pipe_test(dst net.Conn, acc net.Conn) {
 	//defer gstunnellib.Panic_Recover(Logger)
 
 	Logger.Println("Test_Mt_model:", Mt_model)
-	log_List.GSIpLogger.Printf("Gstunnel client ip: %s\n", acc.RemoteAddr().String())
+	log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
 
 	go srcTOdstUn(acc, dst)
 	go srcTOdstP(dst, acc)
@@ -158,7 +159,7 @@ func run_pipe_test_wg(dst net.Conn, acc net.Conn, wg *sync.WaitGroup) {
 	//defer gstunnellib.Panic_Recover(Logger)
 
 	Logger.Println("Test_Mt_model:", Mt_model)
-	log_List.GSIpLogger.Printf("Gstunnel client ip: %s\n", acc.RemoteAddr().String())
+	log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
 
 	wg.Add(2)
 	go srcTOdstUn_wg(acc, dst, wg)

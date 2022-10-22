@@ -13,6 +13,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -58,7 +59,8 @@ func init() {
 	GRuntimeStatistics = gstunnellib.NewRuntimeStatistics()
 
 	log_List.GenLogger = gstunnellib.NewFileLogger("gstunnel_client.log")
-	log_List.GSIpLogger = gstunnellib.NewFileLogger("GSServer_Ip.log")
+	log_List.GSIpLogger = gstunnellib.NewFileLogger("access.log")
+	log_List.GSIpLogger.Println("Raw client access ip list:")
 
 	Logger = log_List.GenLogger
 
@@ -89,8 +91,8 @@ func init() {
 		}()
 		Logger.Println("Debug server listen: localhost:6060")
 	}
-	debug_client = false
-	go gstunnellib.RunGRuntimeStatistics_print(Logger, GRuntimeStatistics)
+	//debug_client = false
+	//go gstunnellib.RunGRuntimeStatistics_print(Logger, GRuntimeStatistics)
 }
 
 func main() {
@@ -124,6 +126,8 @@ func run() {
 			Logger.Println("Error:", err)
 			continue
 		}
+		log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
+
 		server_conn_error_total := 0
 		tmr := timerm.CreateTimer(time.Second * 10)
 		for {
@@ -168,10 +172,26 @@ func run_pipe_test(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe) {
 	dst := gss.GetConn()
 
 	Logger.Println("Test_Mt_model:", Mt_model)
-	log_List.GSIpLogger.Printf("Gstunnel server ip: %s\n", acc.RemoteAddr().String())
+	log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
 
 	go srcTOdstP_count(acc, dst)
 	go srcTOdstUn_count(dst, acc)
+	Logger.Println("Gstunnel go.")
+
+}
+
+func run_pipe_test_wg(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe, wg *sync.WaitGroup) {
+	//defer gstunnellib.Panic_Recover(Logger)
+
+	acc := sc.GetServerConn()
+	dst := gss.GetConn()
+
+	Logger.Println("Test_Mt_model:", Mt_model)
+	log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
+
+	wg.Add(2)
+	go srcTOdstP_wg(acc, dst, wg)
+	go srcTOdstUn_wg(dst, acc, wg)
 	Logger.Println("Gstunnel go.")
 
 }
@@ -210,6 +230,24 @@ func srcTOdstP(src net.Conn, dst net.Conn) {
 }
 
 func srcTOdstUn(src net.Conn, dst net.Conn) {
+	if Mt_model {
+		srcTOdstUn_mt(src, dst)
+	} else {
+		srcTOdstUn_st(src, dst)
+	}
+}
+
+func srcTOdstP_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if Mt_model {
+		srcTOdstP_mt(src, dst)
+	} else {
+		srcTOdstP_st(src, dst)
+	}
+}
+
+func srcTOdstUn_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup) {
+	defer wg.Done()
 	if Mt_model {
 		srcTOdstUn_mt(src, dst)
 	} else {

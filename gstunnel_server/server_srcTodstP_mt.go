@@ -49,18 +49,25 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	ChangeCryKey_Total := 0
 
 	dst_chan := make(chan ([]byte), netPUn_chan_cache_size)
-	defer close(dst_chan)
 
 	dst_ok := gstunnellib.CreateGorouStatus()
+	defer func() {
+		close(dst_chan)
+		for {
+			if !dst_ok.IsOk() {
+				break
+			}
+		}
+	}()
 
 	defer func() {
 		GRuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
+		Logger.Printf("gorou exit.\n%s\tpack  trlen:%d  ChangeCryKey_total:%d\n",
+			gstunnellib.GetNetConnAddrString("src", src), rlent, ChangeCryKey_Total)
 
 		if debug_server {
-			fmt.Println("\tgorou exit.")
-			fmt.Printf("\t\tpack  trlen:%d\n", rlent)
+
 			//fmt.Println("goPackTotal:", goPackTotal)
-			fmt.Println("\tChangeCryKey_total:", ChangeCryKey_Total)
 
 			//	fmt.Println("\tRecoTime_p_r All: ", recot_p_r.StringAll())
 		}
@@ -176,16 +183,13 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 
 	var wlent int64 = wlentotal
 
-	ChangeCryKey_Total := 0
-
 	defer func() {
 		GRuntimeStatistics.AddSrcTotalNetData_send(int(wlent))
+		Logger.Printf("gorou exit.\n%s\tpack  twlen:%d\n",
+			gstunnellib.GetNetConnAddrString("dst", dst), wlent)
 
 		if debug_server {
-			fmt.Println("gorou exit.")
-			fmt.Printf("\tpack  twlen:%d\n", wlent)
 			//fmt.Println("goPackTotal:", goPackTotal)
-			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
 
 			//	fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 		}
@@ -240,7 +244,6 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan ([]byte), dst_ok *gstunnellib.Gorou
 		if tmrP2.Run() && debug_server {
 			fmt.Printf("pack twlen:%d\n", wlent)
 			//fmt.Println("goPackTotal:", goPackTotal)
-			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
 
 			//	fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 		}

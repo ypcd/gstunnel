@@ -50,10 +50,12 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		GRuntimeStatistics.AddSrcTotalNetData_recv(int(rlent))
 		GRuntimeStatistics.AddServerTotalNetData_send(int(wlent))
+		Logger.Printf("gorou exit.\n%s%s\tunpack trlen:%d  twlen:%d\n",
+			gstunnellib.GetNetConnAddrString("src", src),
+			gstunnellib.GetNetConnAddrString("dst", dst),
+			rlent, wlent)
 
 		if debug_server {
-			fmt.Println("gorou exit.")
-			fmt.Printf("\tunpack trlen:%d  twlen:%d\n", rlent, wlent)
 
 			//	fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
 			//	fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())

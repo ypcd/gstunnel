@@ -35,17 +35,23 @@ func (pn *gsPackNetImp) WriteEncryData(data []byte) error {
 	return nil
 }
 func (pn *gsPackNetImp) GetDecryData() ([]byte, error) {
-	rn, fdbl := Find0(pn.buf)
-	var wbuf []byte
-	if fdbl {
-		wbuf = pn.buf[:rn]
-		pn.buf = pn.buf[rn+1:]
 
-		wbuf, err := pn.apack.Unpack(wbuf)
-		checkError_panic(err)
-		return wbuf, nil
-	} else {
-		return nil, nil
+	var rebuf []byte
+	for {
+		rn, fdbl := Find0(pn.buf)
+		var wbuf []byte
+		if fdbl {
+			wbuf = pn.buf[:rn]
+			pn.buf = pn.buf[rn+1:]
+
+			wbuf, err := pn.apack.Unpack(wbuf)
+			checkError_panic(err)
+			if len(wbuf) > 0 {
+				rebuf = append(rebuf, wbuf...)
+			}
+		} else {
+			return rebuf, nil
+		}
 	}
 }
 

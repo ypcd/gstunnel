@@ -3,6 +3,7 @@ package gstunnellib
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -62,4 +63,9 @@ func changeCryKey_sendEX(dst net.Conn, apack GsPack, ChangeCryKey_Total *int, wl
 
 func ChangeCryKey_send(dst net.Conn, apack GsPack, ChangeCryKey_Total *int, wlent *int64) error {
 	return changeCryKey_sendEX(dst, apack, ChangeCryKey_Total, wlent, nil)
+}
+
+func GetNetConnAddrString(str string, conn net.Conn) string {
+	return fmt.Sprintf("%s: [localIp:%s  remoteIp:%s]\n",
+		str, conn.LocalAddr().String(), conn.RemoteAddr().String())
 }

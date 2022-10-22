@@ -44,6 +44,7 @@ func Test_server_NetPipe_m(t *testing.T) {
 func Test_server_NetPipe_loop(t *testing.T) {
 	logger_test.Println("[Test_server_NetPipe_loop] start.")
 	for i := 0; i < 6; i++ {
+		logger_test.Printf("loop count: %d", i)
 		inTest_server_NetPipe(t, false)
 		forceGC()
 	}

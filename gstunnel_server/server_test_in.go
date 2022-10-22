@@ -65,9 +65,11 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	debug_server = true
 
 	testReadTimeOut := time.Second * 1
-	testCacheSize := 300 * 1024 * 1024
+	testCacheSize := 200 * 1024 * 1024
 
-	run_pipe_test(ss.GetClientConn(), gsc.GetConn())
+	wg_run := new(sync.WaitGroup)
+
+	run_pipe_test_wg(ss.GetClientConn(), gsc.GetConn(), wg_run)
 
 	wg := sync.WaitGroup{}
 
@@ -125,6 +127,7 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	//forceGC()
 
 	//time.Sleep(time.Second * 60)
+	wg_run.Wait()
 }
 
 func inTest_server_NetPipe_errorData(t *testing.T, mt_mode bool) {
@@ -137,7 +140,7 @@ func inTest_server_NetPipe_errorData(t *testing.T, mt_mode bool) {
 	debug_server = true
 
 	//testReadTimeOut := time.Second * 1
-	testCacheSize := 300 * 1024 * 1024
+	testCacheSize := 200 * 1024 * 1024
 
 	wg := new(sync.WaitGroup)
 	run_pipe_test_wg(ss.GetClientConn(), gsc.GetServerConn(), wg)
@@ -173,7 +176,7 @@ func inTest_server_NetPipe_errorKey(t *testing.T, mt_mode bool) {
 	debug_server = true
 
 	//testReadTimeOut := time.Second * 1
-	testCacheSize := 300 * 1024 * 1024
+	testCacheSize := 200 * 1024 * 1024
 
 	wg := new(sync.WaitGroup)
 	run_pipe_test_wg(ss.GetClientConn(), gsc.GetServerConn(), wg)

@@ -54,8 +54,8 @@ func forceGC() {
 	logger_test.Println("[runtime.GC] end.")
 }
 
-func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
-	logger_test.Println("[inTest_server_NetPipe] start.")
+func inTest_client_NetPipe(t *testing.T, mt_mode bool) {
+	logger_test.Println("[inTest_client_NetPipe] start.")
 	sc := gstestpipe.NewSrcClientNone()
 	gss := gstestpipe.NewGsPiPeDefultKey()
 
@@ -64,9 +64,11 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	debug_client = true
 
 	testReadTimeOut := time.Second * 100
-	testCacheSize := 300 * 1024 * 1024
+	testCacheSize := 200 * 1024 * 1024
 
-	run_pipe_test(sc, gss)
+	wg_run := new(sync.WaitGroup)
+
+	run_pipe_test_wg(sc, gss, wg_run)
 
 	wg := sync.WaitGroup{}
 
@@ -78,7 +80,7 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	//rbuff := bytes.Buffer{}
 	logger_test.Println("testCacheSize[MiB]:", testCacheSize/1024/1024)
 
-	logger_test.Println("inTest_server_NetPipe data transfer start.")
+	logger_test.Println("inTest_client_NetPipe data transfer start.")
 	t1 := time.Now()
 
 	wg.Add(1)
@@ -118,24 +120,25 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	if !bytes.Equal(SendData, rbuf) {
 		t.Fatal("Error: SendData != rbuf.")
 	}
-	logger_test.Println("[inTest_server_NetPipe] end.")
+	logger_test.Println("[inTest_client_NetPipe] end.")
 	t2 := time.Now()
 	logger_test.Println("[pipe run time(sec)]:", t2.Sub(t1).Seconds())
 	//forceGC()
 
 	//time.Sleep(time.Second * 60)
+	wg_run.Wait()
 }
 
-func inTest_server_NetPipe_go_init() {
+func inTest_client_NetPipe_go_init() {
 	networkTimeout = time.Minute * 20
 	Mt_model = true
 	debug_client = true
 }
 
-func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
+func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	defer gwg.Done()
 
-	logger_test.Println("[inTest_server_NetPipe] start.")
+	logger_test.Println("[inTest_client_NetPipe] start.")
 	sc := gstestpipe.NewServiceServerNone()
 	gss := gstestpipe.NewGsPiPeDefultKey()
 
@@ -154,7 +157,7 @@ func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	//rbuff := bytes.Buffer{}
 	logger_test.Println("testCacheSize[MiB]:", testCacheSize/1024/1024)
 
-	logger_test.Println("inTest_server_NetPipe data transfer start.")
+	logger_test.Println("inTest_client_NetPipe data transfer start.")
 	t1 := time.Now()
 
 	wg.Add(1)
@@ -192,7 +195,7 @@ func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	if !bytes.Equal(SendData, rbuf) {
 		t.Fatal("Error: SendData != rbuf.")
 	}
-	logger_test.Println("[inTest_server_NetPipe] end.")
+	logger_test.Println("[inTest_client_NetPipe] end.")
 	t2 := time.Now()
 	logger_test.Println("[pipe run time(sec)]:", t2.Sub(t1).Seconds())
 	//forceGC()

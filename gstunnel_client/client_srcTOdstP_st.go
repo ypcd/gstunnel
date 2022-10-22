@@ -55,12 +55,13 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		GRuntimeStatistics.AddSrcTotalNetData_recv(int(rlent))
 		GRuntimeStatistics.AddServerTotalNetData_send(int(wlent))
+		Logger.Printf("gorou exit.\n%s%s\tpack  trlen:%d  twlen:%d  ChangeCryKey_total:%d\n",
+			gstunnellib.GetNetConnAddrString("src", src),
+			gstunnellib.GetNetConnAddrString("dst", dst),
+			rlent, wlent, ChangeCryKey_Total)
 
 		if debug_client {
-			fmt.Println("gorou exit.")
-			fmt.Printf("\tpack  trlen:%d  twlen:%d\n", rlent, wlent)
-			fmt.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
-			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
+			//fmt.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
 
 			//fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
 			//fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
