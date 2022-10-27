@@ -3,6 +3,7 @@
 
 ![image](https://github.com/ypcd/gstunnel/blob/master/img/gstunnel%20Class%20Diagram.png)
 
+gstunnel（go security tunnel，go语言开发的安全网络隧道）
 
 This is a secure network tunnel.
 ```
@@ -10,9 +11,11 @@ This is a secure network tunnel.
 推荐使用6.2.30.2版本或更新版本。
 低于6.2.30.2版本的源代码存在较为严重的安全漏洞。
 ```
-【gstunnel（go security tunnel，go语言开发的安全网络管道）介绍】
 
-gstunnel 是基于go 语言开发的高性能、高并发的跨平台轻量级高安全网络加密管道，支持tcp协议。
+【项目介绍】
+
+
+gstunnel 是基于go 语言开发的高性能、高并发的跨平台轻量级高安全网络加密隧道，支持tcp协议。
 
 ```
 gstunnel采用安全优先原则，不追求最大化性能，所以没有使用一些会降低安全性的设计。
@@ -190,149 +193,192 @@ gstunnel在工作目录下自动生成日志文件，日志文件记录gstunnel�
 项目基于GPLv3协议开源。
 
 ---------------------------------------------
+
+gstunnel (go security tunnel, secure network tunnel developed in go language)
+
 This is a secure network tunnel.
+```
+Note:
+6.2.30.2 or later is recommended.
+Source code versions earlier than 6.2.30.2 have serious security vulnerabilities.
+```
 
-Note: It is recommended to use the project source code of version 2.7 or higher. The source code lower than 2.7 has serious security vulnerabilities.
+【 Project Introduction 】
 
-[Introduction of gstunnel]
 
-gstunnel is a high-performance, high-concurrency cross-platform lightweight security network encryption pipeline developed based on the go language, and it supports the tcp protocol.
+gstunnel is a high performance, high concurrency cross-platform lightweight high security network encryption tunnel developed based on go language, which supports tcp protocol.
 
-The project adopts multi-coroutine and lock-free mode to ensure the high performance and high concurrency of gstunnel.
+```
+gstunnel uses a security first principle and does not seek to maximize performance, so it does not use designs that would reduce security.
+For example, coroutine pooling, memory object pooling, socket connection reuse (in complex network environment, but will reduce the performance of network communication) and other designs.
+```
+High performance:
+```
+The project uses multi-GO coroutines and lock-free mode to ensure the high performance and high concurrency of gstunnel.
 
-Multi-coroutine, you can make full use of multiple CPU cores for parallel computing, and give full play to the maximum performance of multi-core CPUs.
+Multi-go coroutines can make full use of multiple cpu cores for parallel computing to maximize the performance of multi-core cpus.
 
-The adoption of the lock-free mode minimizes the occurrence of data competition and the security problems caused by data competition.
+The lock-free mode minimizes the occurrence of data contention and the security problems caused by data contention. (Through good project design, the core code of the project is lock-free)
 
-Golang does not provide complete memory safety guarantees at the language level. Golang uses gc to manage memory and provides some memory security, but memory security problems may still occur due to data competition.
+net library using the go standard library. At the Go language level, blocking + multi-coroutine mode is adopted.
 
-Based on go language development, using go default net library. The Go language layer uses the blocking + multi-coroutine mode for network communication.
+Network model:
 
-Network model: Because the default net library of go, the bottom layer is based on non-blocking + multiplexing model (windows iocp, linux epoll), so the essential model of gstunnel is non-blocking + multiplexing model. Ensure the high performance of gstunnel network communication.
+Because go's default net library is based on non-blocking + multiplexing models (windows iocp, linux epoll), the gstunnel substantial model is a non-blocking + multiplexing model.
+The high performance of gstunnel network communication is guaranteed.
 
-The project uses the AES encryption algorithm and uses a dynamic symmetric key for encryption. By default, the key is updated every minute, replacing the old key with a new key. The dynamic key mechanism will greatly increase the difficulty for attackers to crack encrypted data and provide better security.
+For better performance, use protobuf as the serialization format. (Versions 3.8.1 and earlier use json as the serialization format. In protobuf format, the performance is four times that of the json version.)
 
-The dynamic key mechanism will bring a slight performance loss (less than 5%). For higher security, such a cost is reasonable and necessary.
+```
+Security:
+```
+golang does not provide full memory security (e.g., rust) guarantees at the language level.
+golang uses gc to manage memory, which provides some memory security, but memory security issues can still occur due to data contention.
 
-In order to ensure higher security, the project uses a strong random number generator based on hardware.
 
-For better performance, use protobuf as the serialization format. (Version 3.8.1 and earlier use json as the serialization format. After using the protobuf format, the performance is 4 times that of the json version.)
+The project uses AES-GCM-256 encryption algorithm, using dynamic symmetric key encryption, network communication through the secure gstunnel protocol.
+Dynamic key mechanism. By default, the key is updated every minute, replacing the old key with the new one.
+Dynamic key mechanism will greatly increase the difficulty of attackers to crack encrypted data and provide better security.
 
-It is not recommended to use gstunnel as a complete substitute for VPN (openvpn, ipsec, etc.).
+The dynamic key mechanism, which brings a slight performance loss (less than 5%), is designed for higher security.
 
-Gstunnel is just a lightweight network encryption pipeline, which only provides limited security. The security is lower than that of mainstream VPN products such as openvpn and ipsec, and cannot replace mainstream VPNs.
+In order to ensure higher security, the project uses Intel Digital Random Number Generator (DRNG) based on hardware.
+```
 
-Compared with traditional VPN, gstunnel also has some security advantages. gstunnel is just an ordinary user-mode program and does not require a dedicated vpn driver (usually a kernel-mode driver with the highest authority). Therefore, even if gstunnel has serious security vulnerabilities, under normal circumstances, it will not endanger the security of the entire operating system. The dynamic key of gstunnel has better security than the static key used by traditional VPN.
+```
+gstunnel is not recommended as a complete alternative to vpn (openvpn, ipsec, etc.).
+```
+```
+Gstunnel is a lightweight network encryption pipeline that provides limited security compared to mainstream vpn products such as openvpn and ipsec, and cannot replace mainstream VPNS.
 
-The gstunnel encrypted tunnel can be a long connection or a short connection, and the specific performance depends on the connection characteristics of the carried service. If the business connection is a long connection, the encrypted tunnel will also remain a long connection. If the business connection is a short connection, the encrypted tunnel will be a short connection.
+gstunnel also offers several security advantages over traditional VPNS.
 
-An encrypted tunnel connection of the gstunnel client, in the mt mode, will generate 4 processing goroutines; in the non-mt mode, it will generate 2 processing goroutines.
+gstunnel is a common user-mode program that does not require a dedicated vpn driver (usually a kernel driver with the highest permissions).
+Therefore, even if gstunnel has serious security vulnerabilities, it will not endanger the security of the entire operating system under normal circumstances.
 
-An encrypted tunnel connection of the gstunnel client corresponds to a separate and exclusive encryption key, and each encrypted tunnel connection uses a different encryption key. If the gstunnel client has 10 encrypted tunnel connections, there will be ten different encryption keys, and each encryption key is solely responsible for the encryption and decryption of an encrypted tunnel connection.
+The dynamic key of gstunnel provides better security than the static key used in traditional VPNS.
+```
+A gstunnel encrypted tunnel connection is a stateful connection.
+It can be either a long or a short connection, depending on the nature of the hosted service connection.
+If the service connection is a long connection, the encryption tunnel also remains a long connection. If the service connection is a short connection, the encryption tunnel is a short connection.
 
-Supported platforms: windows, linux, mac os
+An encrypted tunnel connection of the gstunnel client, in mt mode, produces four processing coroutines; In non-MT mode, two processing coroutines are generated.
+
+An encryption tunnel connection of the gstunnel client, corresponding to a separate and exclusive encryption key. Each encryption tunnel connection uses a different encryption key.
+If the gstunnel client has 10 cryptographic tunnel connections, there will be 10 cryptographic keys, each of which is solely responsible for encrypting and decrypting one cryptographic tunnel connection.
+```
+Supported platforms:
+windows, linux, mac os
 
 Supported applications:
 
-HTTP proxy (squid3, etc.), email, socks 5 proxy and other applications developed based on tcp.
+Applications such as http proxy (squid3), email, and socks 5 proxy are developed based on tcp.
 
-Note: There are some bugs in the project, which have not been fixed for the time being. These bugs do not affect normal use.
+Note: There are some bugs in the project that have not been fixed yet. These bugs do not affect normal use.
+```
+Performance Performance:
+```
+intel i5-1135G7 2.40GHz cpu(low-voltage cpu, laptop cpu) configuration:
 
-gstunnel is divided into two parts: client and server.
+gstunnel (v6.2.30.2) can achieve single-ended (gstunnel server or gstunnel client) performance of more than 120MBytes/s.
+```
+
+gstunnel is divided into client and server parts.
 
 gstunnel encrypts data based on aes.
 
-Process schematic:
+Schematic diagram of process:
 
-In the network, the network communication from a to b.
+In network, the network communication between a and b.
 
 a-->b
 
-After using gstunnel, the network communication from a to b.
+After using gstunnel, a to b network communication.
 
 a-->gstunnel client -->gstunnel server -->b
 
-gstunnel provides an encryption layer for the network communication between a and b.
+gstunnel adds an encryption layer for network communication between a and b.
 
-Make the communication data of a and b become encrypted data, so that the third party cannot know the communication content of a and b. So as to ensure the safety of a and b network communication.
+As a result, the communication data of a and b becomes encrypted data, so that a third party cannot know the communication content of A and b. This ensures the security of network communication between a and b.
 
-Instructions:
+Method of use:
 
-It can be installed through the "go get" tool.
+You can install it using the go get tool.
 
-Or after downloading the project source code, copy it to the "$GOPATH\src" directory.
+Or download the project source code and copy it to the $GOPATH\src directory.
 
-Use the command line tool to compile or install the project source code.
+Compile or install the project source code using a command-line tool.
 
-"Go build gstunnel_client" "go build gstunnel_server"
+"go build gstunnel_client" "go build gstunnel_server"
 
-"Go install gstunnel_client" "go install gstunnel_server"
+go install gstunnel_client go install gstunnel_server
 
-At this time you get two executable files gstunnel_client and gstunnel_server.
+You have two executables, gstunnel_client and gstunnel_server.
 
-3.8.1 and earlier versions, if there is a problem in compiling the source code, please try to enter the command "set GO111MODULE=off" to turn off the go module function.
+3.8.1 and earlier versions, if there is a problem compiling the source code, please try to enter the command "set GO111MODULE=off" to turn off the go module function.
 
-Configuration parameter
+Configuration parameters
 
-Executable file, accepts command line-based parameter input (not recommended) and configuration file (json)-based parameter settings. It is recommended to use a configuration file (json) to configure the parameters. The configuration file name of the client: config.client.json The configuration file name of the server: config.server.json Configuration file parameters:
+An executable that accepts configuration file (json) based parameter Settings.
+The client configuration file name is config.client.json
+server configuration file name: config.server.json
+Configuration file parameters:
 ```
 type GsConfig struct {
-Listen string
-Servers []string
-Key string
-Debug bool
-Tmr_display_time int
+Listen             string
+Servers            []string
+Key                string
+Debug              bool
+Tmr_display_time   int
 Tmr_changekey_time int
-Mt_model bool
+Mt_model           bool
 }
 ```
 ```
-Required parameters
+Will choose parameters
 listen: listening address (string)
-servers: target address (string array)
+servers: destination address (array of strings)
 key: aes encryption key (string)
 
+Note: The aes encryption key can only be a string of 32 bytes.
+
 Optional parameters
-debug: whether to enable debug mode (true or false)
-Tmr_display_time Set the interval time (in seconds) of information output to the standard output stream
-Tmr_changekey_time Set how long it takes for the dynamic key to be changed (unit: second)
-Mt_model Whether to enable multi-coroutine mode in the main logic module (true or false)
+debug: Whether to enable the debug mode (true or false)
+Tmr_display_time Sets the interval (in seconds) at which information is output to the standard output stream
+Tmr_changekey_time Specifies the interval in seconds for changing dynamic keys.
+Mt_model Whether to enable multiple coroutines in the main logic module (true or false)
 ```
 ```
 Example configuration file:
 
-{"listen": "127.0.0.1:33128", "servers": ["127.0.0.1:10036"], "key": "12345678901234567890123456789012"}
+{" listen ", "127.0.0.1:33128", "the servers:" [] "127.0.0.1:10036", "key" : "12345678901234567890123456789012"}
 
-listen: listening address
-servers: destination address
+listen: indicates a listening address
+servers: target address
 key: aes encryption key
 ```
-Command line format:
 
-Executable file name Listening address Target address aes password
-
-Note: the aes password can only be a string of 16, 24, 32 bytes.
-
-for example:
+For example:
 
 Linux bash:
 
-user@ubuntu:~$ ./gstunnel_client 127.0.0.1:3128 1.2.3.4:43210 "12345678901234567890123456789012"
+user@ubuntu:~$ ./gstunnel_client
 
-user@ubuntu:~$ ./gstunnel_server 1.2.3.4:43210 1.2.3.4:3128 "12345678901234567890123456789012"
+user@ubuntu:~$ ./gstunnel_server
 
-Note: Please ensure that the client is an executable file in the Linux system. Whether it is an executable file, please check the file attributes of the client file.
+Note: Ensure that client is an executable file in linux. If it is an executable file, view the file properties of the client file.
 
-Windows cmd:
+Windows CMD:
 
-C:> ./gstunnel_client.exe 127.0.0.1:3128 1.2.3.4:43210 "12345678901234567890123456789012"
+C:> ./gstunnel_client.exe
 
-C:> ./gstunnel_server.exe 1.2.3.4:43210 1.2.3.4:3128 "12345678901234567890123456789012"
+C:> ./gstunnel_server.exe
 
-Log
+The log
 
-gstunnel automatically generates a log file in the working directory, and the log file records error messages generated when gstunnel is running. The log file names are gstunnel_client.err.log, gstunnel_server.err.log.
+gstunnel automatically generates a log file in the working directory. The log file records the error information generated when gstunnel is running.
+The log files are named gstunnel_client.err.log and gstunnel_server.err.log.
 
-Project address: https://github.com/ypcd/gstunnel
+The address of the project: https://github.com/ypcd/gstunnel
 
-The project is open source based on the GPLv3 agreement.
+The project is open source based on GPLv3 protocol.
