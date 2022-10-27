@@ -34,6 +34,7 @@ gstunnel采用安全优先原则，不追求最大化性能，所以没有使用
 保证了gstunnel网络通信的高性能。
 
 为了更好的性能，使用protobuf作为序列化格式。（3.8.1及之前的版本使用json作为序列化格式。使用protobuf格式后，性能为json版的4倍。）
+
 ```
 安全性：
 ```
@@ -81,6 +82,13 @@ http proxy（squid3等）、email、socks 5 proxy等基于tcp开发的应用。
 
 注意：项目存在一些bug，暂时没有修复。这些bug并不影响正常使用。
 ```
+性能表现：
+```
+在intel i5-1135G7 2.40GHz cpu(低压cpu，笔记本电脑cpu）配置:
+
+gstunnel（v6.2.30.2)可以实现单端（gstunnel server或gstunnel client）超过120MBytes/s的性能。
+```
+
 gstunnel分为client和server两部分。
 
 gstunnel 基于aes进行数据加密。
