@@ -10,7 +10,7 @@ This is a secure network tunnel.
 推荐使用6.2.30.2版本或更新版本。
 低于6.2.30.2版本的源代码存在较为严重的安全漏洞。
 ```
-【gstunnel介绍】
+【gstunnel（go security tunnel，go语言开发的安全网络管道）介绍】
 
 gstunnel 是基于go 语言开发的高性能、高并发的跨平台轻量级高安全网络加密管道，支持tcp协议。
 
