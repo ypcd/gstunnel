@@ -9,7 +9,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"os"
@@ -20,10 +19,9 @@ import (
 )
 
 func srcTOdstUn_st(src net.Conn, dst net.Conn) {
+	defer gstunnellib.Panic_Recover(Logger)
 	defer src.Close()
 	defer dst.Close()
-
-	//defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -49,17 +47,17 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		GRuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
 		GRuntimeStatistics.AddSrcTotalNetData_send(int(wlent))
-		Logger.Printf("gorou exit.\n%s%s\tpack  trlen:%d  twlen:%d\n",
+		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\t%s\tunpack  trlen:%d  twlen:%d\n",
 			gstunnellib.GetNetConnAddrString("src", src),
 			gstunnellib.GetNetConnAddrString("dst", dst),
 			rlent, wlent)
 
 		if debug_client {
 
-			//	fmt.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
+			//	Logger.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
-			//	fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
-			//	fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+			//	Logger.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
+			//	Logger.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 	}()
 
@@ -70,8 +68,9 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 			checkError_info(err)
+			return
 		} else {
-			checkError(err)
+			checkError_panic(err)
 		}
 
 		pf("trlen:%d  rlen:%d\n", rlent, rlen)
@@ -95,24 +94,24 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 		apack.WriteEncryData(rbuf[:rlen])
 		wbuf, err = apack.GetDecryData()
-		checkError(err)
+		checkError_panic(err)
 		if len(wbuf) > 0 {
 			rn, err := io.Copy(dst, bytes.NewBuffer(wbuf))
 			wlent += rn
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.EOF) {
-				checkError_NoExit(err)
+				checkError_info(err)
 				return
 			} else {
-				checkError(err)
+				checkError_panic(err)
 			}
 		}
 
 		if tmrP2.Run() && debug_client {
-			fmt.Printf("unpack  trlen:%d  twlen:%d\n", rlent, wlent)
-			fmt.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
+			Logger.Printf("unpack  trlen:%d  twlen:%d\n", rlent, wlent)
+			Logger.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
-			//	fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
-			//	fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+			//	Logger.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
+			//	Logger.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 	}
 

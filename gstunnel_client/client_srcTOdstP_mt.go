@@ -9,10 +9,10 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"os"
+	"sync"
 	"sync/atomic"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
@@ -20,7 +20,7 @@ import (
 )
 
 func srcTOdstP_mt(src net.Conn, dst net.Conn) {
-	//defer gstunnellib.Panic_Recover(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -49,26 +49,23 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	ChangeCryKey_Total := 0
 
 	dst_chan := make(chan []byte, netPUn_chan_cache_size)
+	wg_w := new(sync.WaitGroup)
 
-	dst_ok := gstunnellib.CreateGorouStatus()
+	dst_ok := gstunnellib.NewGorouStatus()
 	defer func() {
-		close(dst_chan)
-		for {
-			if !dst_ok.IsOk() {
-				break
-			}
-		}
+		gstunnellib.CloseChan(dst_chan)
+		wg_w.Wait()
 	}()
 
 	defer func() {
 		GRuntimeStatistics.AddSrcTotalNetData_recv(int(rlent))
-		Logger.Printf("gorou exit.\n%s\tpack  trlen:%d  ChangeCryKey_total:%d\n",
+		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\tpack  trlen:%d  ChangeCryKey_total:%d\n",
 			gstunnellib.GetNetConnAddrString("src", src), rlent, ChangeCryKey_Total)
 
 		if debug_client {
-			//fmt.Println("\tgoPackTotal:", atomic.LoadInt32(&goPackTotal))
+			//Logger.Println("\tgoPackTotal:", atomic.LoadInt32(&goPackTotal))
 
-			//fmt.Println("\tRecoTime_p_r All: ", recot_p_r.StringAll())
+			//Logger.Println("\tRecoTime_p_r All: ", recot_p_r.StringAll())
 		}
 	}()
 
@@ -83,7 +80,8 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		return
 	}
 
-	go srcTOdstP_w(dst, dst_chan, dst_ok, wlent)
+	wg_w.Add(1)
+	go srcTOdstP_w(dst, dst_chan, dst_ok, wlent, wg_w)
 	dst = nil
 
 	for dst_ok.IsOk() {
@@ -94,8 +92,9 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 			checkError_info(err)
+			return
 		} else {
-			checkError(err)
+			checkError_panic(err)
 		}
 
 		rlent += int64(rlen)
@@ -138,11 +137,11 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 			buf = nil
 		}
 		if tmrP2.Run() && debug_client {
-			fmt.Printf("pack  trlen:%d\n", rlent)
-			fmt.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
-			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
+			Logger.Printf("pack  trlen:%d\n", rlent)
+			Logger.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
+			Logger.Println("ChangeCryKey_total:", ChangeCryKey_Total)
 
-			//fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
+			//Logger.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
 
 		}
 
@@ -150,8 +149,9 @@ func srcTOdstP_mt(src net.Conn, dst net.Conn) {
 	Logger.Println("Func exit.")
 }
 
-func srcTOdstP_w(dst net.Conn, dst_chan chan []byte, dst_ok *gstunnellib.Gorou_status, wlentotal int64) {
-	//defer gstunnellib.Panic_Recover(Logger)
+func srcTOdstP_w(dst net.Conn, dst_chan chan []byte, dst_ok gstunnellib.Gorou_status, wlentotal int64, wg_w *sync.WaitGroup) {
+	defer wg_w.Done()
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -173,23 +173,21 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan []byte, dst_ok *gstunnellib.Gorou_s
 
 	defer func() {
 		GRuntimeStatistics.AddServerTotalNetData_send(int(wlent))
-		Logger.Printf("gorou exit.\n%s\tpack  twlen:%d\n",
+		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\tpack  twlen:%d\n",
 			gstunnellib.GetNetConnAddrString("dst", dst), wlent)
 
 		if debug_client {
-			//fmt.Println("goPackTotal:", goPackTotal)
+			//Logger.Println("goPackTotal:", goPackTotal)
 
-			//fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
+			//Logger.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 		}
 	}()
 
 	defer func() {
 		dst_ok.SetClose()
-		for {
-			_, ok := <-dst_chan
-			if !ok {
-				break
-			}
+		_, ok := <-dst_chan
+		if ok {
+			gstunnellib.CloseChan(dst_chan)
 		}
 	}()
 
@@ -209,19 +207,19 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan []byte, dst_ok *gstunnellib.Gorou_s
 			wlent += int64(wlen)
 			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 				errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
-				checkError_NoExit(err)
+				checkError_info(err)
 				return
 			} else {
-				checkError(err)
+				checkError_panic(err)
 			}
 			tmr_out.Boot()
 		}
 
 		if tmrP2.Run() && debug_client {
-			fmt.Printf("pack twlen:%d\n", wlent)
-			//fmt.Println("goPackTotal:", goPackTotal)
+			Logger.Printf("pack twlen:%d\n", wlent)
+			//Logger.Println("goPackTotal:", goPackTotal)
 
-			//fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
+			//Logger.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 		}
 		if tmr_out.Run() {
 			Logger.Println("Error: Time out, func exit.")

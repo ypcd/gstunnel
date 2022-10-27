@@ -408,9 +408,9 @@ func Test_gspacknet_pack_unpack_2(t *testing.T) {
 	encrydata := pn.Packing(rawdata)
 
 	decrydata, err := pn.Unpack([]byte(encrydata))
-	checkError_exit(err)
+	checkError_panic(err)
 	if !bytes.Equal(rawdata, decrydata) {
-		checkError_exit(errors.New("Rawdata != decrydata."))
+		checkError_panic(errors.New("Rawdata != decrydata."))
 	}
 }
 

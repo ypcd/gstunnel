@@ -3,11 +3,9 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"os"
-	"time"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
 	"github.com/ypcd/gstunnel/v6/timerm"
@@ -16,7 +14,10 @@ import (
 func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	defer gstunnellib.Panic_Recover(Logger)
 
-	tmr_out := timerm.CreateTimer(time.Second * 60)
+	defer src.Close()
+	defer dst.Close()
+
+	tmr_out := timerm.CreateTimer(networkTimeout)
 	//tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
@@ -31,15 +32,12 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	fp2 = fpnull
 	_, _ = fp1, fp2
 
-	var err error
-	_ = err
+	//var err error
 	//outf, err := os.Create(fp1)
 	//checkError(err)
 	//outf2, err := os.Create(fp2)
 	//checkError(err)
 
-	defer src.Close()
-	defer dst.Close()
 	//defer outf.Close()
 	//defer outf2.Close()
 	var rbuf, wbuf []byte
@@ -50,15 +48,15 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		GRuntimeStatistics.AddSrcTotalNetData_recv(int(rlent))
 		GRuntimeStatistics.AddServerTotalNetData_send(int(wlent))
-		Logger.Printf("gorou exit.\n%s%s\tunpack trlen:%d  twlen:%d\n",
+		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\t%s\tunpack trlen:%d  twlen:%d\n",
 			gstunnellib.GetNetConnAddrString("src", src),
 			gstunnellib.GetNetConnAddrString("dst", dst),
 			rlent, wlent)
 
 		if debug_server {
 
-			//	fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
-			//	fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+			//	Logger.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
+			//	Logger.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 	}()
 
@@ -69,8 +67,9 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 			checkError_info(err)
+			return
 		} else {
-			checkError(err)
+			checkError_panic(err)
 		}
 		rlent += uint64(rlen)
 
@@ -90,23 +89,23 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 		apack.WriteEncryData(rbuf[:rlen])
 		wbuf, err = apack.GetDecryData()
-		checkError(err)
+		checkError_panic(err)
 		if len(wbuf) > 0 {
 			rn, err := io.Copy(dst, bytes.NewBuffer(wbuf))
 			wlent += uint64(rn)
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.EOF) {
-				checkError_NoExit(err)
+				checkError_info(err)
 				return
 			} else {
-				checkError(err)
+				checkError_panic(err)
 			}
 		}
 
 		if tmrP2.Run() && debug_server {
-			fmt.Printf("unpack trlen:%d  twlen:%d\n", rlent, wlent)
+			Logger.Printf("unpack trlen:%d  twlen:%d\n", rlent, wlent)
 
-			//	fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
-			//	fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+			//	Logger.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
+			//	Logger.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 	}
 }

@@ -91,7 +91,7 @@ func inTest_client_NetPipe(t *testing.T, mt_mode bool) {
 		for {
 			server.SetReadDeadline(time.Now().Add(testReadTimeOut))
 			re, err := server.Read(buf)
-			t.Logf("server read len: %d", re)
+			//t.Logf("server read len: %d", re)
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 				gstunnellib.CheckErrorEx_info(err, Logger)
 				return
@@ -145,7 +145,9 @@ func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	testReadTimeOut := time.Second * 3
 	testCacheSize := 100 * 1024 * 1024
 
-	run_pipe_test(sc, gss)
+	wg_run := new(sync.WaitGroup)
+
+	run_pipe_test_wg(sc, gss, wg_run)
 
 	wg := sync.WaitGroup{}
 
@@ -168,7 +170,7 @@ func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 		for {
 			server.SetReadDeadline(time.Now().Add(testReadTimeOut))
 			re, err := server.Read(buf)
-			t.Logf("server read len: %d", re)
+			//t.Logf("server read len: %d", re)
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 				gstunnellib.CheckError_test_noExit(err, t)
 				return
@@ -201,4 +203,5 @@ func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	//forceGC()
 
 	//time.Sleep(time.Second * 60)
+	wg_run.Wait()
 }

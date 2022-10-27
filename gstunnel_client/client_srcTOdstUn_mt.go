@@ -9,10 +9,10 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"os"
+	"sync"
 	"sync/atomic"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
@@ -20,7 +20,7 @@ import (
 )
 
 func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
-	//defer gstunnellib.Panic_Recover(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -43,29 +43,27 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 	rlent := int64(0)
 
 	dst_chan := make(chan []byte, netPUn_chan_cache_size)
+	wg_w := new(sync.WaitGroup)
 
-	dst_ok := gstunnellib.CreateGorouStatus()
+	dst_ok := gstunnellib.NewGorouStatus()
 	defer func() {
-		close(dst_chan)
-		for {
-			if !dst_ok.IsOk() {
-				break
-			}
-		}
+		gstunnellib.CloseChan(dst_chan)
+		wg_w.Wait()
 	}()
 
-	go srcTOdstUn_w(dst, dst_chan, dst_ok)
+	wg_w.Add(1)
+	go srcTOdstUn_w(dst, dst_chan, dst_ok, wg_w)
 	dst = nil
 
 	defer func() {
 		GRuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
-		Logger.Printf("gorou exit.\n%s\tpack  trlen:%d\n",
+		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\tunpack  trlen:%d\n",
 			gstunnellib.GetNetConnAddrString("src", src), rlent)
 
 		if debug_client {
-			//fmt.Println("\tgoUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
+			//Logger.Println("\tgoUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
-			//	fmt.Println("\tRecoTime_un_r All: ", recot_un_r.StringAll())
+			//	Logger.Println("\tRecoTime_un_r All: ", recot_un_r.StringAll())
 		}
 	}()
 
@@ -78,8 +76,9 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 			checkError_info(err)
+			return
 		} else {
-			checkError(err)
+			checkError_panic(err)
 		}
 
 		pf("trlen:%d  rlen:%d\n", rlent, rlen)
@@ -109,17 +108,18 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn) {
 		buf = nil
 
 		if tmrP2.Run() && debug_client {
-			fmt.Printf("unpack  trlen:%d\n", rlent)
-			fmt.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
+			Logger.Printf("unpack  trlen:%d\n", rlent)
+			Logger.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
-			//fmt.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
+			//Logger.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
 		}
 	}
 	Logger.Println("Func exit.")
 }
 
-func srcTOdstUn_w(dst net.Conn, dst_chan chan []byte, dst_ok *gstunnellib.Gorou_status) {
-	//defer gstunnellib.Panic_Recover(Logger)
+func srcTOdstUn_w(dst net.Conn, dst_chan chan []byte, dst_ok gstunnellib.Gorou_status, wg_w *sync.WaitGroup) {
+	defer wg_w.Done()
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 
@@ -146,23 +146,21 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan []byte, dst_ok *gstunnellib.Gorou_
 
 	defer func() {
 		GRuntimeStatistics.AddSrcTotalNetData_send(int(wlent))
-		Logger.Printf("gorou exit.\n%s\tpack  twlen:%d\n",
+		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\tunpack  twlen:%d\n",
 			gstunnellib.GetNetConnAddrString("dst", dst), wlent)
 
 		if debug_client {
-			//fmt.Println("\tgoUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
+			//Logger.Println("\tgoUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
-			//fmt.Println("\tRecoTime_un_w All: ", recot_un_w.StringAll())
+			//Logger.Println("\tRecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 	}()
 
 	defer func() {
 		dst_ok.SetClose()
-		for {
-			_, ok := <-dst_chan
-			if !ok {
-				break
-			}
+		_, ok := <-dst_chan
+		if ok {
+			gstunnellib.CloseChan(dst_chan)
 		}
 	}()
 
@@ -179,16 +177,15 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan []byte, dst_ok *gstunnellib.Gorou_
 
 		apack.WriteEncryData(buf)
 		wbuf, err = apack.GetDecryData()
-
-		checkError(err)
+		checkError_panic(err)
 		if len(wbuf) > 0 {
 			rn, err := io.Copy(dst, bytes.NewBuffer(wbuf))
 			wlent += uint64(rn)
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.EOF) {
-				checkError_NoExit(err)
+				checkError_info(err)
 				return
 			} else {
-				checkError(err)
+				checkError_panic(err)
 			}
 		}
 
@@ -198,9 +195,9 @@ func srcTOdstUn_w(dst net.Conn, dst_chan chan []byte, dst_ok *gstunnellib.Gorou_
 		}
 
 		if tmrP2.Run() && debug_client {
-			fmt.Printf("unpack  twlen:%d\n", wlent)
+			Logger.Printf("unpack  twlen:%d\n", wlent)
 
-			//fmt.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
+			//Logger.Println("RecoTime_un_w All: ", recot_un_w.StringAll())
 		}
 
 	}

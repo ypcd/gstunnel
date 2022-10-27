@@ -25,6 +25,7 @@ func NewFileLogger(FileName string) *log.Logger {
 type Logger_List struct {
 	GenLogger  *log.Logger
 	GSIpLogger *log.Logger
+	GSNetIOLen *log.Logger
 }
 
 //func NewLoggerList()

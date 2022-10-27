@@ -45,7 +45,7 @@ const net_read_size = 4 * 1024
 const netPUn_chan_cache_size = 64
 
 var Mt_model bool = true
-var tmr_display_time = time.Second * 5
+var tmr_display_time = time.Second * 6
 var tmr_changekey_time = time.Second * 60
 
 //var bufPool sync.Pool
@@ -60,6 +60,7 @@ func init() {
 
 	log_List.GenLogger = gstunnellib.NewFileLogger("gstunnel_client.log")
 	log_List.GSIpLogger = gstunnellib.NewFileLogger("access.log")
+	log_List.GSNetIOLen = gstunnellib.NewFileLogger("net_io_len.log")
 	log_List.GSIpLogger.Println("Raw client access ip list:")
 
 	Logger = log_List.GenLogger
@@ -110,9 +111,9 @@ func run() {
 	lstnaddr = gsconfig.Listen
 	connaddr = gsconfig.GetServers()
 
-	fmt.Println("Listen_Addr:", lstnaddr)
-	fmt.Println("Conn_Addr:", connaddr)
-	fmt.Println("Begin......")
+	Logger.Println("Listen_Addr:", lstnaddr)
+	Logger.Println("Conn_Addr:", connaddr)
+	Logger.Println("Begin......")
 
 	service := lstnaddr
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
@@ -141,7 +142,7 @@ func run() {
 			dst, err := net.Dial("tcp", service)
 			//checkError(err)
 			if err != nil {
-				if server_conn_error_total > 10000 {
+				if server_conn_error_total > 1000 {
 					fmt.Fprintln(os.Stderr, "Error: server_conn_error_total > 10000")
 					Logger.Fatalln("Error: server_conn_error_total > 10000")
 				}
@@ -151,7 +152,7 @@ func run() {
 
 				continue
 			}
-			fmt.Println("conn.", service)
+			Logger.Println("conn.", service)
 
 			//acc: 		src---client
 			//dst: 		client---serever
@@ -161,11 +162,11 @@ func run() {
 			go srcTOdstUn_count(dst, acc)
 			break
 		}
-		fmt.Println("go.")
+		Logger.Println("go.")
 	}
 }
 
-func run_pipe_test(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe) {
+func nouse_run_pipe_test(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe) {
 	//defer gstunnellib.Panic_Recover(Logger)
 
 	acc := sc.GetServerConn()
@@ -265,4 +266,8 @@ func checkError_NoExit(err error) {
 
 func checkError_info(err error) {
 	gstunnellib.CheckErrorEx_info(err, Logger)
+}
+
+func checkError_panic(err error) {
+	gstunnellib.CheckErrorEx_panic(err, Logger)
 }

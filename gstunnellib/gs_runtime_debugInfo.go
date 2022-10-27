@@ -58,11 +58,11 @@ func (di *runTimeDebugInfoImp) WriteFile(FileName string) {
 	f, err := os.Create(FileName)
 	defer func() {
 		err := f.Close()
-		checkError_exit(err)
+		checkError_panic(err)
 	}()
-	checkError_exit(err)
+	checkError_panic(err)
 	data, err := json.Marshal(newRunTimeDebugInfoImpJson(di))
-	checkError_exit(err)
+	checkError_panic(err)
 	_, err = io.Copy(f, bytes.NewBuffer(data))
-	checkError_exit(err)
+	checkError_panic(err)
 }

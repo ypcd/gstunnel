@@ -11,17 +11,19 @@ func Test_client_NetPipe_st(t *testing.T) {
 	if gstunnellib.RunTime_Debug {
 		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
 	}
+	logger_test.Print("\n\n")
 	logger_test.Println("[Test_client_NetPipe_st] start.")
 	inTest_client_NetPipe(t, false)
-	logger_test.Println("[Test_client_NetPipe_st] end.")
+	logger_test.Print("[Test_client_NetPipe_st] end.\n\n")
 }
 func Test_client_NetPipe_mt(t *testing.T) {
 	if gstunnellib.RunTime_Debug {
 		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
 	}
+	logger_test.Println()
 	logger_test.Println("[Test_client_NetPipe_mt] start.")
 	inTest_client_NetPipe(t, true)
-	logger_test.Println("[Test_client_NetPipe_mt] end.")
+	logger_test.Print("[Test_client_NetPipe_mt] end.\n\n")
 }
 
 func Test_client_NetPipe_m(t *testing.T) {
@@ -38,7 +40,7 @@ func Test_client_NetPipe_m(t *testing.T) {
 		go inTest_client_NetPipe_go(t, &gwg)
 	}
 	gwg.Wait()
-	logger_test.Println("[Test_client_NetPipe_m] end.")
+	logger_test.Print("[Test_client_NetPipe_m] end.\n\n")
 }
 
 func Test_client_NetPipe_loop(t *testing.T) {
@@ -48,5 +50,5 @@ func Test_client_NetPipe_loop(t *testing.T) {
 		inTest_client_NetPipe(t, false)
 		forceGC()
 	}
-	logger_test.Println("[Test_client_NetPipe_loop] end.")
+	logger_test.Print("[Test_client_NetPipe_loop] end.\n\n")
 }

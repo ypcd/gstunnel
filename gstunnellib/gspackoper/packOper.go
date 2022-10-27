@@ -154,7 +154,7 @@ func createPackOperGen(data []byte) *packOper {
 	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POGenOper,
 		Data:     data,
-		Rand:     GetRDCBytes(8),
+		Rand:     GetRDCBytes(int(128 * GetRDF64())),
 	}}
 
 	pd.HashHex = pd.GetSha256()
@@ -168,7 +168,8 @@ func createPackOperChangeKey() *packOper {
 	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POChangeCryKey,
 		OperData: []byte(key),
-		Rand:     GetRDCBytes(8),
+		//Rand:     GetRDBytes(8),
+		Rand: GetRDCBytes(int(2048 * GetRDF64())),
 	}}
 
 	pd.HashHex = pd.GetSha256()
@@ -177,7 +178,8 @@ func createPackOperChangeKey() *packOper {
 
 func createPackOperVersion() *packOper {
 
-	rd := GetRDCBytes(8)
+	rd := GetRDCBytes(int(2048 * GetRDF64()))
+	//rd := GetRDBytes(8)
 
 	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POVersion,

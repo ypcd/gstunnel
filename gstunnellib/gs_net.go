@@ -29,7 +29,7 @@ func isTheVersionConsistent_sendEx(dst net.Conn, apack GsPack, wlent *int64, Get
 			checkError_panic(err)
 			return err
 		} else {
-			checkError_exit(err)
+			checkError_panic(err)
 		}
 	}
 	return nil
@@ -56,7 +56,7 @@ func changeCryKey_sendEX(dst net.Conn, apack GsPack, ChangeCryKey_Total *int, wl
 		checkError_panic(err)
 		return err
 	} else {
-		checkError_exit(err)
+		checkError_panic(err)
 	}
 	return nil
 }

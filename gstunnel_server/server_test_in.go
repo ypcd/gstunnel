@@ -92,7 +92,7 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 		for {
 			server.SetReadDeadline(time.Now().Add(testReadTimeOut))
 			re, err := server.Read(buf)
-			t.Logf("server read len: %d", re)
+			//t.Logf("server read len: %d", re)
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 				gstunnellib.CheckError_test_noExit(err, t)
 				return
@@ -159,7 +159,7 @@ func inTest_server_NetPipe_errorData(t *testing.T, mt_mode bool) {
 
 	///////////////////////////////////////////////////////////////////////////
 	_, err := io.Copy(gsc.GetClientConn(), bytes.NewBuffer(SendData))
-	checkError_NoExit(err)
+	checkError_panic(err)
 
 	//////////////////////////////////////////////////////////////////////////
 	wg.Wait()
@@ -197,7 +197,7 @@ func inTest_server_NetPipe_errorKey(t *testing.T, mt_mode bool) {
 	pack1 := gstunnellib.NewGsPackNet(key_error)
 	pdata := pack1.Packing(gsrand.GetRDBytes(1024 * 1024 * 10))
 	_, err := io.Copy(gsc.GetClientConn(), bytes.NewBuffer(pdata))
-	checkError_NoExit(err)
+	checkError_panic(err)
 
 	wg.Wait()
 	//////////////////////////////////////////////////////////////////////////
@@ -220,7 +220,8 @@ func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	testReadTimeOut := time.Second * 1
 	testCacheSize := 100 * 1024 * 1024
 
-	run_pipe_test(ss.GetClientConn(), gsc.GetConn())
+	wg_run := new(sync.WaitGroup)
+	run_pipe_test_wg(ss.GetClientConn(), gsc.GetConn(), wg_run)
 
 	wg := sync.WaitGroup{}
 
@@ -243,7 +244,7 @@ func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 		for {
 			server.SetReadDeadline(time.Now().Add(testReadTimeOut))
 			re, err := server.Read(buf)
-			t.Logf("server read len: %d", re)
+			//t.Logf("server read len: %d", re)
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 				gstunnellib.CheckError_test_noExit(err, t)
 				return
@@ -273,4 +274,5 @@ func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	//forceGC()
 
 	//time.Sleep(time.Second * 60)
+	wg_run.Wait()
 }

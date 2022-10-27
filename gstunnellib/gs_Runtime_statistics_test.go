@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
 
 func Test_Runtime_statistics_imp(t *testing.T) {
@@ -22,9 +24,11 @@ func Test_Runtime_statistics_imp(t *testing.T) {
 
 func Test_Runtime_statistics_imp_mgo(t *testing.T) {
 	v1 := NewRuntimeStatistics()
-	//v1.AddTotalNetworkData(1)
+
+	gos := NewGorouStatus()
+	defer gos.SetClose()
 	go func() {
-		for {
+		for gos.IsOk() {
 			time.Sleep(time.Millisecond * 100)
 			re, err := v1.GetJson()
 			CheckError_test(err, t)
@@ -38,6 +42,43 @@ func Test_Runtime_statistics_imp_mgo(t *testing.T) {
 		v1.AddServerTotalNetData_send(1)
 		v1.AddSrcTotalNetData_recv(1)
 		v1.AddSrcTotalNetData_send(1)
-
 	}
+}
+
+func Test_Runtime_statistics_mgo(t *testing.T) {
+	v1 := NewRuntimeStatistics()
+	gos := NewGorouStatus()
+	defer gos.SetClose()
+
+	go func() {
+		for gos.IsOk() {
+			v1.AddServerTotalNetData_recv(int(gsrand.GetRDCInt64()))
+		}
+	}()
+
+	go func() {
+		for gos.IsOk() {
+			v1.AddServerTotalNetData_send(int(gsrand.GetRDCInt64()))
+		}
+	}()
+
+	go func() {
+		for gos.IsOk() {
+			v1.AddSrcTotalNetData_recv(int(gsrand.GetRDCInt64()))
+		}
+	}()
+
+	go func() {
+		for gos.IsOk() {
+			v1.AddSrcTotalNetData_send(int(gsrand.GetRDCInt64()))
+		}
+	}()
+
+	go func() {
+		for gos.IsOk() {
+			v1.GetJson()
+		}
+	}()
+
+	time.Sleep(time.Second * 3)
 }

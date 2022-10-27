@@ -9,7 +9,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"os"
@@ -20,7 +19,7 @@ import (
 )
 
 func srcTOdstP_st(src net.Conn, dst net.Conn) {
-	//defer gstunnellib.Panic_Recover(Logger)
+	defer gstunnellib.Panic_Recover(Logger)
 
 	tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
@@ -55,16 +54,16 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		GRuntimeStatistics.AddSrcTotalNetData_recv(int(rlent))
 		GRuntimeStatistics.AddServerTotalNetData_send(int(wlent))
-		Logger.Printf("gorou exit.\n%s%s\tpack  trlen:%d  twlen:%d  ChangeCryKey_total:%d\n",
+		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\t%s\tpack  trlen:%d  twlen:%d  ChangeCryKey_total:%d\n",
 			gstunnellib.GetNetConnAddrString("src", src),
 			gstunnellib.GetNetConnAddrString("dst", dst),
 			rlent, wlent, ChangeCryKey_Total)
 
 		if debug_client {
-			//fmt.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
+			//Logger.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
 
-			//fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
-			//fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
+			//Logger.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
+			//Logger.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 		}
 	}()
 
@@ -86,8 +85,10 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
 			checkError_info(err)
+			return
 		} else {
-			checkError(err)
+			checkError_panic(err)
+
 		}
 
 		rlent += int64(rlen)
@@ -129,10 +130,10 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 			wlent += int64(wlen)
 			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 				errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
-				checkError_NoExit(err)
+				checkError_info(err)
 				return
 			} else {
-				checkError(err)
+				checkError_panic(err)
 			}
 			tmr_out.Boot()
 		}
@@ -146,12 +147,12 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		buf = rbuf
 		if tmrP2.Run() && debug_client {
 
-			fmt.Printf("pack  trlen:%d  twlen:%d\n", rlent, wlent)
-			fmt.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
-			fmt.Println("ChangeCryKey_total:", ChangeCryKey_Total)
+			Logger.Printf("pack  trlen:%d  twlen:%d\n", rlent, wlent)
+			Logger.Println("goPackTotal:", atomic.LoadInt32(&goPackTotal))
+			Logger.Println("ChangeCryKey_total:", ChangeCryKey_Total)
 
-			//fmt.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
-			//fmt.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
+			//Logger.Println("RecoTime_p_r All: ", recot_p_r.StringAll())
+			//Logger.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 
 		}
 

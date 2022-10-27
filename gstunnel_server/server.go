@@ -7,7 +7,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -58,6 +57,7 @@ func init() {
 
 	log_List.GenLogger = gstunnellib.NewFileLogger("gstunnel_server.log")
 	log_List.GSIpLogger = gstunnellib.NewFileLogger("access.log")
+	log_List.GSNetIOLen = gstunnellib.NewFileLogger("net_io_len.log")
 	log_List.GSIpLogger.Println("Gstunnel client access ip list:")
 
 	Logger = log_List.GenLogger
@@ -111,9 +111,9 @@ func run() {
 	lstnaddr = gsconfig.Listen
 	connaddr = gsconfig.GetServer_rand()
 
-	fmt.Println("Listen_Addr:", lstnaddr)
-	fmt.Println("Conn_Addr:", connaddr)
-	fmt.Println("Begin......")
+	Logger.Println("Listen_Addr:", lstnaddr)
+	Logger.Println("Conn_Addr:", connaddr)
+	Logger.Println("Begin......")
 
 	service := lstnaddr
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
@@ -130,20 +130,18 @@ func run() {
 		log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
 
 		service := connaddr
-		//tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
-		//fmt.Println(tcpAddr)
-		//checkError(err)
+
 		dst, err := net.Dial("tcp", service)
 		checkError(err)
-		fmt.Println("conn.")
+		Logger.Println("conn.")
 
 		go srcTOdstUn(acc, dst)
 		go srcTOdstP(dst, acc)
-		fmt.Println("go.")
+		Logger.Println("go.")
 	}
 }
 
-func run_pipe_test(dst net.Conn, acc net.Conn) {
+func nouse_run_pipe_test(dst net.Conn, acc net.Conn) {
 	//defer gstunnellib.Panic_Recover(Logger)
 
 	Logger.Println("Test_Mt_model:", Mt_model)

@@ -15,10 +15,10 @@ func createAes(key []byte) gsaes {
 	var err error
 
 	v1.cpr, err = aes.NewCipher(key)
-	checkError_exit(err)
+	checkError_panic(err)
 
 	v1.gcm, err = cipher.NewGCMWithNonceSize(v1.cpr, len(commonIV))
-	checkError_exit(err)
+	checkError_panic(err)
 
 	//v2 := v1.gcm.NonceSize()
 	//_ = v2

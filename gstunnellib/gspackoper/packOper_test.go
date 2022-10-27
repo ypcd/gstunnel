@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/ypcd/gstunnel/v6/timerm"
@@ -318,4 +319,40 @@ func Test_sha256_file(t *testing.T) {
 	fmt.Println(
 		hex.EncodeToString(s2.Sum([]byte{})),
 	)
+}
+
+// old len:  55  80
+func Test_randSize(t *testing.T) {
+	for i := 0; i < 100; i++ {
+		p1 := JsonPacking_OperVersion()
+		p2 := JsonPacking_OperChangeKey()
+		p3 := jsonPacking_OperGen(nil)
+		fmt.Printf("len:  %d  %d  %d\n", len(p1), len(p2), len(p3))
+	}
+
+}
+
+func Test_randSize_sort(t *testing.T) {
+	list_p1 := []int{}
+	list_p2 := []int{}
+	list_p3 := []int{}
+
+	for i := 0; i < 100; i++ {
+		p1 := JsonPacking_OperVersion()
+		p2 := JsonPacking_OperChangeKey()
+		p3 := jsonPacking_OperGen(nil)
+		fmt.Printf("len:  %d  %d  %d\n", len(p1), len(p2), len(p3))
+
+		list_p1 = append(list_p1, len(p1))
+		list_p2 = append(list_p2, len(p2))
+		list_p3 = append(list_p3, len(p3))
+	}
+
+	sort.Ints(list_p1)
+	sort.Ints(list_p2)
+	sort.Ints(list_p3)
+
+	fmt.Printf("len:  %v  \n", list_p1)
+	fmt.Printf("len:  %v  \n", list_p2)
+	fmt.Printf("len:  %v  \n", list_p3)
 }
