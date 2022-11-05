@@ -36,11 +36,7 @@ func NewGsPiPeDefultKey() GsPiPe {
 	return &gsClientImp{key: key_defult}
 }
 
-func NewGsPiPeErrorKey(key string) GsPiPeErrorKey {
-	return &gsClientImp{key: key}
-}
-
-func NewGsPiPeErrorKeyDefultKey() GsPiPeErrorKey {
+func NewGsPiPeErrorKeyNoKey() GsPiPeErrorKey {
 	return &gsClientImp{key: key_defult}
 }
 
@@ -51,7 +47,7 @@ func (gc *gsClientImp) GetConn() net.Conn {
 	gc.connList = newPipeConn()
 
 	go func(gc *gsClientImp, pp *pipe_conn) {
-		buf := make([]byte, 2*1024)
+		buf := make([]byte, 4*1024)
 		var rbuf, wbuf []byte
 		var readSize, writeSize int64 = 0, 0
 

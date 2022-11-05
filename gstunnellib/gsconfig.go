@@ -19,13 +19,16 @@ type gsConfig_1 struct {
 }
 
 type GsConfig struct {
-	Listen             string
-	Servers            []string
-	Key                string
-	Debug              bool
+	Listen  string
+	Servers []string
+	Key     string
+
 	Tmr_display_time   int
 	Tmr_changekey_time int
-	Mt_model           bool
+	NetworkTimeout     int
+
+	Debug    bool
+	Mt_model bool
 }
 
 func (gs *GsConfig) GetServer_rand() string {
@@ -35,9 +38,9 @@ func (gs *GsConfig) GetServers() []string {
 	return gs.Servers
 }
 
-func CreateGsconfig(confn string) *GsConfig {
-	f, err := os.Open(confn)
-	checkError(err)
+func CreateGsconfig(confg string) *GsConfig {
+	f, err := os.Open(confg)
+	checkError_exit(err)
 	defer f.Close()
 
 	buf, err := io.ReadAll(f)
@@ -46,23 +49,17 @@ func CreateGsconfig(confn string) *GsConfig {
 	//fmt.Println(string(buf))
 	var gsconfig GsConfig
 
-	gsconfig.Debug = false
-	gsconfig.Tmr_display_time = 5
+	gsconfig.Tmr_display_time = 6
 	gsconfig.Tmr_changekey_time = 60
+	gsconfig.NetworkTimeout = 60
+	gsconfig.Debug = false
 	gsconfig.Mt_model = true
 
 	err = json.Unmarshal(buf, &gsconfig)
 	checkError(err)
-	/*
-		if gsconfig.Tmr_display_time == 0 {
-			gsconfig.Tmr_display_time = 5
-		}
-		if gsconfig.Tmr_changekey_time == 0 {
-			gsconfig.Tmr_changekey_time = 60
-		}
-	*/
-	if gsconfig.Servers == nil {
-		logger.Fatalln("gsconfig.Servers==nil")
+
+	if gsconfig.Servers == nil || gsconfig.Key == "" || gsconfig.Listen == "" {
+		logger.Fatalln("Gstunnel config is error.")
 	}
 	return &gsconfig
 }

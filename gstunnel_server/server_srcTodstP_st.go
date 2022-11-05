@@ -12,17 +12,21 @@ import (
 	"github.com/ypcd/gstunnel/v6/timerm"
 )
 
-func srcTOdstP_st(src net.Conn, dst net.Conn) {
-	defer gstunnellib.Panic_Recover(Logger)
+func srcTOdstP_st(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
+	defer gstunnellib.Panic_Recover_GSCtx(Logger, gctx)
 
 	defer src.Close()
 	defer dst.Close()
 
-	tmr_out := timerm.CreateTimer(time.Second * 60)
+	//tmr_out := timerm.CreateTimer(networkTimeout)
 	//tmrP := timerm.CreateTimer(tmr_display_time)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
 
 	tmr_changekey := timerm.CreateTimer(tmr_changekey_time)
+
+	nt_read := gstunnellib.NewNetTimeImpName("read")
+	nt_write := gstunnellib.NewNetTimeImpName("write")
+	var timer1, timew1 time.Time
 
 	//	recot_p_r := timerm.CreateRecoTime()
 	//	recot_p_w := timerm.CreateRecoTime()
@@ -39,9 +43,9 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	_ = err
 
 	//outf, err := os.Create(fp1)
-	//checkError(err)
+	//checkError_GsCtx(err,gctx)
 	//outf2, err := os.Create(fp2)
-	//checkError(err)
+	//checkError_GsCtx(err,gctx)
 
 	//defer outf.Close()
 	//defer outf2.Close()
@@ -56,12 +60,16 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		GRuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
 		GRuntimeStatistics.AddSrcTotalNetData_send(int(wlent))
-		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\t%s\tpack  trlen:%d  twlen:%d  ChangeCryKey_total:%d\n",
+		log_List.GSNetIOLen.Printf("[%d] gorou exit.\n\t%s\t%s\tpack  trlen:%d  twlen:%d  ChangeCryKey_total:%d\n\t%s\t%s",
+			gctx.GetGsId(),
 			gstunnellib.GetNetConnAddrString("src", src),
 			gstunnellib.GetNetConnAddrString("dst", dst),
-			rlent, wlent, ChangeCryKey_Total)
+			rlent, wlent, ChangeCryKey_Total,
+			nt_read.PrintString(),
+			nt_write.PrintString(),
+		)
 
-		if debug_server {
+		if GValues.GetDebug() {
 
 			//Logger.Println("goPackTotal:", goPackTotal)
 
@@ -71,29 +79,33 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 	}()
 
 	err = IsTheVersionConsistent_send(dst, apack, &wlent)
-	checkError_panic(err)
+	checkError_panic_GsCtx(err, gctx)
 
 	err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
-	checkError_panic(err)
+	checkError_panic_GsCtx(err, gctx)
 
 	for {
 		buf = rbuf
 		//	recot_p_r.Run()
+		src.SetReadDeadline(time.Now().Add(networkTimeout))
+		timer1 = time.Now()
 		rlen, err := src.Read(rbuf)
+		rlent += int64(rlen)
 		//	recot_p_r.Run()
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
-			checkError_info(err)
+			checkError_info_GsCtx(err, gctx)
 			return
 		} else {
-			checkError_panic(err)
+			checkError_panic_GsCtx(err, gctx)
 		}
-		rlent += int64(rlen)
-
-		if tmr_out.Run() {
-			Logger.Println("Error: Time out, func exit.")
-			return
-		}
+		nt_read.Add(time.Now().Sub(timer1))
+		/*
+			if tmr_out.Run() {
+				Logger.Printf("Error: [%d] Time out, func exit.\n", gctx.GetGsId())
+				return
+			}
+		*/
 		if rlen == 0 {
 			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
@@ -104,7 +116,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 		}
 
 		//outf.Write(buf[:rlen])
-		tmr_out.Boot()
+		//tmr_out.Boot()
 		//rbuf = buf
 		buf = rbuf[:rlen]
 
@@ -129,16 +141,19 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 				Logger.Println("Error: gspack.packing is error.")
 				return
 			}
+			dst.SetWriteDeadline(time.Now().Add(networkTimeout))
+			timew1 = time.Now()
 			wlen, err := io.Copy(dst, bytes.NewBuffer(buf))
 			wlent += int64(wlen)
 			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 				errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
-				checkError_info(err)
+				checkError_info_GsCtx(err, gctx)
 				return
 			} else {
-				checkError_panic(err)
+				checkError_panic_GsCtx(err, gctx)
 			}
-			tmr_out.Boot()
+			nt_write.Add(time.Now().Sub(timew1))
+			//tmr_out.Boot()
 		}
 		if tmr_changekey.Run() {
 			err = ChangeCryKey_send(dst, apack, &ChangeCryKey_Total, &wlent)
@@ -148,7 +163,7 @@ func srcTOdstP_st(src net.Conn, dst net.Conn) {
 			}
 		}
 		buf = rbuf
-		if tmrP2.Run() && debug_server {
+		if tmrP2.Run() && GValues.GetDebug() {
 			Logger.Printf("pack  trlen:%d  twlen:%d\n", rlent, wlent)
 			//Logger.Println("goPackTotal:", goPackTotal)
 			Logger.Println("ChangeCryKey_total:", ChangeCryKey_Total)

@@ -7,12 +7,15 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,29 +27,37 @@ import (
 
 const version string = gstunnellib.Version
 
+var GValues = gstunnellib.NewGlobalValuesImp()
+
 var p = gstunnellib.Nullprint
 var pf = gstunnellib.Nullprintf
 
 var fpnull = os.DevNull
 
 var key string
+var key_gen = flag.String("g", "1", "-g key. Generate a random 32-byte key.")
 
 var gsconfig *gstunnellib.GsConfig
+
+var gsconfig_path = flag.String("c", "config.client.json", "The gstunnel config file path.")
 
 var goPackTotal, goUnpackTotal int32 = 0, 0
 
 var Logger *log.Logger
 
-var networkTimeout time.Duration = time.Minute * 1
-
-var debug_client bool = false
+// defult 60s
+var networkTimeout time.Duration
 
 const net_read_size = 4 * 1024
 const netPUn_chan_cache_size = 64
 
 var Mt_model bool = true
-var tmr_display_time = time.Second * 6
-var tmr_changekey_time = time.Second * 60
+
+// defult 6s
+var tmr_display_time time.Duration
+
+// defult 60s
+var tmr_changekey_time time.Duration
 
 //var bufPool sync.Pool
 
@@ -54,13 +65,28 @@ var GRuntimeStatistics gstunnellib.Runtime_statistics
 
 var log_List gstunnellib.Logger_List
 
-func init() {
+var init_status = false
 
+var gid = gstunnellib.NewGIdImp()
+
+func init_client_run() {
+
+	if init_status {
+		panic(errors.New("The init func is error."))
+	} else {
+		init_status = true
+	}
+
+	flag.Parse()
+	if strings.Contains(strings.ToUpper(*key_gen), strings.ToUpper("key")) {
+		fmt.Println(gstunnellib.GetRDKeyString32())
+		os.Exit(1)
+	}
 	GRuntimeStatistics = gstunnellib.NewRuntimeStatistics()
 
-	log_List.GenLogger = gstunnellib.NewFileLogger("gstunnel_client.log")
-	log_List.GSIpLogger = gstunnellib.NewFileLogger("access.log")
-	log_List.GSNetIOLen = gstunnellib.NewFileLogger("net_io_len.log")
+	log_List.GenLogger = gstunnellib.NewLoggerFileAndStdOut("gstunnel_client.log")
+	log_List.GSIpLogger = gstunnellib.NewLoggerFileAndStdOut("access.log")
+	log_List.GSNetIOLen = gstunnellib.NewLoggerFileAndLog("net_io_len.log", log_List.GenLogger.Writer())
 	log_List.GSIpLogger.Println("Raw client access ip list:")
 
 	Logger = log_List.GenLogger
@@ -68,8 +94,8 @@ func init() {
 	Logger.Println("gstunnel client.")
 	Logger.Println("VER:", version)
 
-	gsconfig = gstunnellib.CreateGsconfig("config.client.json")
-	debug_client = gsconfig.Debug
+	gsconfig = gstunnellib.CreateGsconfig(*gsconfig_path)
+	GValues.SetDebug(gsconfig.Debug)
 
 	key = gsconfig.Key
 
@@ -77,33 +103,86 @@ func init() {
 
 	tmr_display_time = time.Second * time.Duration(gsconfig.Tmr_display_time)
 	tmr_changekey_time = time.Second * time.Duration(gsconfig.Tmr_changekey_time)
+	networkTimeout = time.Second * time.Duration(gsconfig.NetworkTimeout)
 
-	Logger.Println("debug:", debug_client)
+	Logger.Println("debug:", GValues.GetDebug())
 
 	Logger.Println("Mt_model:", Mt_model)
 	Logger.Println("tmr_display_time:", tmr_display_time)
 	Logger.Println("tmr_changekey_time:", tmr_changekey_time)
+	Logger.Println("networkTimeout:", networkTimeout)
 
 	Logger.Println("info_protobuf:", gstunnellib.Info_protobuf)
 
-	if debug_client {
+	if GValues.GetDebug() {
 		go func() {
 			Logger.Fatalln("http server: ", http.ListenAndServe("localhost:6060", nil))
 		}()
 		Logger.Println("Debug server listen: localhost:6060")
 	}
-	//debug_client = false
+	//GValues.GetDebug() = false
+	//go gstunnellib.RunGRuntimeStatistics_print(Logger, GRuntimeStatistics)
+}
+
+func init_client_test() {
+	if init_status {
+		panic(errors.New("The init func is error."))
+	} else {
+		init_status = true
+	}
+
+	//	flag.Parse()
+	GRuntimeStatistics = gstunnellib.NewRuntimeStatistics()
+
+	log_List.GenLogger = gstunnellib.NewLoggerFileAndStdOut("gstunnel_client.log")
+	log_List.GSIpLogger = gstunnellib.NewLoggerFileAndStdOut("access.log")
+	log_List.GSNetIOLen = gstunnellib.NewLoggerFileAndLog("net_io_len.log", log_List.GenLogger.Writer())
+	log_List.GSIpLogger.Println("Raw client access ip list:")
+
+	Logger = log_List.GenLogger
+
+	Logger.Println("gstunnel client.")
+	Logger.Println("VER:", version)
+
+	gsconfig = gstunnellib.CreateGsconfig(*gsconfig_path)
+	GValues.SetDebug(gsconfig.Debug)
+
+	key = gsconfig.Key
+
+	Mt_model = gsconfig.Mt_model
+
+	tmr_display_time = time.Second * time.Duration(gsconfig.Tmr_display_time)
+	tmr_changekey_time = time.Second * time.Duration(gsconfig.Tmr_changekey_time)
+	networkTimeout = time.Second * time.Duration(gsconfig.NetworkTimeout)
+
+	Logger.Println("debug:", GValues.GetDebug())
+
+	Logger.Println("Mt_model:", Mt_model)
+	Logger.Println("tmr_display_time:", tmr_display_time)
+	Logger.Println("tmr_changekey_time:", tmr_changekey_time)
+	Logger.Println("networkTimeout:", networkTimeout)
+
+	Logger.Println("info_protobuf:", gstunnellib.Info_protobuf)
+
+	if GValues.GetDebug() {
+		go func() {
+			Logger.Fatalln("http server: ", http.ListenAndServe("localhost:6060", nil))
+		}()
+		Logger.Println("Debug server listen: localhost:6060")
+	}
+	//GValues.GetDebug() = false
 	//go gstunnellib.RunGRuntimeStatistics_print(Logger, GRuntimeStatistics)
 }
 
 func main() {
+	init_client_run()
 	for {
 		run()
 	}
 }
 
 func run() {
-	//defer gstunnellib.Panic_Recover(Logger)
+	//defer gstunnellib.Panic_Recover_GSCtx(Logger, gctx)
 
 	var lstnaddr string
 	var connaddr []string
@@ -158,31 +237,18 @@ func run() {
 			//dst: 		client---serever
 			//pack: 	acc read recv, dst wirte send.
 			//unpack:	dst read recv, acc wirte send.
-			go srcTOdstP_count(acc, dst)
-			go srcTOdstUn_count(dst, acc)
+
+			gctx := gstunnellib.NewGsContextImp(gid.GetId())
+			go srcTOdstP_count(acc, dst, gctx)
+			go srcTOdstUn_count(dst, acc, gctx)
 			break
 		}
 		Logger.Println("go.")
 	}
 }
 
-func nouse_run_pipe_test(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe) {
-	//defer gstunnellib.Panic_Recover(Logger)
-
-	acc := sc.GetServerConn()
-	dst := gss.GetConn()
-
-	Logger.Println("Test_Mt_model:", Mt_model)
-	log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
-
-	go srcTOdstP_count(acc, dst)
-	go srcTOdstUn_count(dst, acc)
-	Logger.Println("Gstunnel go.")
-
-}
-
 func run_pipe_test_wg(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe, wg *sync.WaitGroup) {
-	//defer gstunnellib.Panic_Recover(Logger)
+	//defer gstunnellib.Panic_Recover_GSCtx(Logger, gctx)
 
 	acc := sc.GetServerConn()
 	dst := gss.GetConn()
@@ -190,9 +256,10 @@ func run_pipe_test_wg(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe, wg *sync
 	Logger.Println("Test_Mt_model:", Mt_model)
 	log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
 
+	gctx := gstunnellib.NewGsContextImp(gid.GetId())
 	wg.Add(2)
-	go srcTOdstP_wg(acc, dst, wg)
-	go srcTOdstUn_wg(dst, acc, wg)
+	go srcTOdstP_wg(acc, dst, wg, gctx)
+	go srcTOdstUn_wg(dst, acc, wg, gctx)
 	Logger.Println("Gstunnel go.")
 
 }
@@ -201,16 +268,16 @@ func find0(v1 []byte) (int, bool) {
 	return gstunnellib.Find0(v1)
 }
 
-func srcTOdstP_count(src net.Conn, dst net.Conn) {
+func srcTOdstP_count(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
 	atomic.AddInt32(&goPackTotal, 1)
-	srcTOdstP(src, dst)
+	srcTOdstP(src, dst, gctx)
 	atomic.AddInt32(&goPackTotal, -1)
 
 }
 
-func srcTOdstUn_count(src net.Conn, dst net.Conn) {
+func srcTOdstUn_count(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
 	atomic.AddInt32(&goUnpackTotal, 1)
-	srcTOdstUn(src, dst)
+	srcTOdstUn(src, dst, gctx)
 	atomic.AddInt32(&goUnpackTotal, -1)
 }
 
@@ -222,52 +289,36 @@ func ChangeCryKey_send(dst net.Conn, apack gstunnellib.GsPack, ChangeCryKey_Tota
 	return gstunnellib.ChangeCryKey_send(dst, apack, ChangeCryKey_Total, wlent)
 }
 
-func srcTOdstP(src net.Conn, dst net.Conn) {
+func srcTOdstP(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
 	if Mt_model {
-		srcTOdstP_mt(src, dst)
+		srcTOdstP_mt(src, dst, gctx)
 	} else {
-		srcTOdstP_st(src, dst)
+		srcTOdstP_st(src, dst, gctx)
 	}
 }
 
-func srcTOdstUn(src net.Conn, dst net.Conn) {
+func srcTOdstUn(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
 	if Mt_model {
-		srcTOdstUn_mt(src, dst)
+		srcTOdstUn_mt(src, dst, gctx)
 	} else {
-		srcTOdstUn_st(src, dst)
+		srcTOdstUn_st(src, dst, gctx)
 	}
 }
 
-func srcTOdstP_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup) {
+func srcTOdstP_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup, gctx gstunnellib.GsContext) {
 	defer wg.Done()
 	if Mt_model {
-		srcTOdstP_mt(src, dst)
+		srcTOdstP_mt(src, dst, gctx)
 	} else {
-		srcTOdstP_st(src, dst)
+		srcTOdstP_st(src, dst, gctx)
 	}
 }
 
-func srcTOdstUn_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup) {
+func srcTOdstUn_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup, gctx gstunnellib.GsContext) {
 	defer wg.Done()
 	if Mt_model {
-		srcTOdstUn_mt(src, dst)
+		srcTOdstUn_mt(src, dst, gctx)
 	} else {
-		srcTOdstUn_st(src, dst)
+		srcTOdstUn_st(src, dst, gctx)
 	}
-}
-
-func checkError(err error) {
-	gstunnellib.CheckErrorEx_exit(err, Logger)
-}
-
-func checkError_NoExit(err error) {
-	gstunnellib.CheckErrorEx(err, Logger)
-}
-
-func checkError_info(err error) {
-	gstunnellib.CheckErrorEx_info(err, Logger)
-}
-
-func checkError_panic(err error) {
-	gstunnellib.CheckErrorEx_panic(err, Logger)
 }

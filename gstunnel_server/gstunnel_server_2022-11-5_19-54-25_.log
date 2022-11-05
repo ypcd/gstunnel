@@ -1,0 +1,73 @@
+2022/11/05 19:54:25 server.go:149: gstunnel server.
+2022/11/05 19:54:25 server.go:151: VER: V6.2.30.8
+2022/11/05 19:54:25 server.go:165: debug: true
+2022/11/05 19:54:25 server.go:167: Mt_model: true
+2022/11/05 19:54:25 server.go:168: tmr_display_time: 6s
+2022/11/05 19:54:25 server.go:169: tmr_changekey_time: 1m0s
+2022/11/05 19:54:25 server.go:170: networkTimeout: 1m0s
+2022/11/05 19:54:25 server.go:172: info_protobuf: true
+2022/11/05 19:54:25 server.go:178: pprof server listen: localhost:6070
+2022/11/05 19:54:25 server_test.go:27: 
+
+2022/11/05 19:54:25 server_test.go:28: [Test_server_NetPipe_st] start.
+2022/11/05 19:54:25 server_test_in.go:54: [inTest_server_NetPipe] start.
+2022/11/05 19:54:25 server.go:235: Test_Mt_model: false
+2022/11/05 19:54:25 server.go:242: Gstunnel go.
+2022/11/05 19:54:25 server_test_in.go:76: testCacheSize[MiB]: 200
+2022/11/05 19:54:25 server_test_in.go:78: inTest_server_NetPipe data transfer start.
+2022/11/05 19:54:28 server_test_in.go:48: [runtime.GC] start.
+2022/11/05 19:54:28 server_test_in.go:50: [runtime.GC] end.
+2022/11/05 19:54:28 server_test_in.go:48: [runtime.GC] start.
+2022/11/05 19:54:28 server_srcTodstP_st.go:97: Info: [1] EOF
+2022/11/05 19:54:28 server_test_in.go:50: [runtime.GC] end.
+2022/11/05 19:54:28 server_srcTodstP_st.go:63: [1] gorou exit.
+	src: [localIp:pipe  remoteIp:pipe]
+	dst: [localIp:pipe  remoteIp:pipe]
+	pack  trlen:209715200  twlen:225867129  ChangeCryKey_total:1
+	read time: max:92.8902ms  min:0s  avg:4.174µs  sum:213.7309ms  count:51200
+	write time: max:10.1128ms  min:0s  avg:30.237µs  sum:1.5481436s  count:51200
+2022/11/05 19:54:28 server_srcTOdstUn_st.go:81: Info: [1] io: read/write on closed pipe
+2022/11/05 19:54:28 server_srcTOdstUn_st.go:56: [1] gorou exit.
+	src: [localIp:pipe  remoteIp:pipe]
+	dst: [localIp:pipe  remoteIp:pipe]
+	unpack trlen:225889922  twlen:209715200
+	read time: max:96.0203ms  min:0s  avg:14.334µs  sum:1.4678431s  count:102400
+	write time: max:10.0216ms  min:0s  avg:3.522µs  sum:180.3558ms  count:51200
+2022/11/05 19:54:28 server_test_in.go:118: [inTest_server_NetPipe] end.
+2022/11/05 19:54:28 server_test_in.go:120: [pipe run time(sec)]: 2.5668484
+2022/11/05 19:54:28 server_test.go:30: [Test_server_NetPipe_st] end.
+
+2022/11/05 19:54:28 server_test.go:36: [Test_server_NetPipe_mt] start.
+2022/11/05 19:54:28 server_test_in.go:54: [inTest_server_NetPipe] start.
+2022/11/05 19:54:28 server.go:235: Test_Mt_model: true
+2022/11/05 19:54:28 server.go:242: Gstunnel go.
+2022/11/05 19:54:28 server_test_in.go:76: testCacheSize[MiB]: 200
+2022/11/05 19:54:28 server_test_in.go:78: inTest_server_NetPipe data transfer start.
+2022/11/05 19:54:31 server_test_in.go:48: [runtime.GC] start.
+2022/11/05 19:54:31 server_test_in.go:50: [runtime.GC] end.
+2022/11/05 19:54:31 server_test_in.go:48: [runtime.GC] start.
+2022/11/05 19:54:31 server_srcTodstP_mt.go:101: Info: [2] EOF
+2022/11/05 19:54:31 server_srcTodstP_mt.go:64: [2] gorou exit.
+	src: [localIp:pipe  remoteIp:pipe]
+	pack  trlen:209715200  ChangeCryKey_total:1
+	read time: max:114.5486ms  min:0s  avg:4.34µs  sum:222.2567ms  count:51200
+2022/11/05 19:54:31 server_srcTodstP_mt_w.go:80: Error: [2] dst_chan is not ok, func exit.
+2022/11/05 19:54:31 server_srcTodstP_mt_w.go:54: [2] gorou exit.
+	dst: [localIp:pipe  remoteIp:pipe]
+	pack  twlen:225846561
+	write time: max:10.4195ms  min:0s  avg:52.199µs  sum:2.6726196s  count:51200
+2022/11/05 19:54:31 server_srcTOdstUn_mt.go:91: Info: [2] io: read/write on closed pipe
+2022/11/05 19:54:31 server_srcTOdstUn_mt.go:67: [2] gorou exit.
+	src: [localIp:pipe  remoteIp:pipe]
+	unpack  trlen:225886530
+	read time: max:118.7642ms  min:0s  avg:26.705µs  sum:2.7346563s  count:102400
+2022/11/05 19:54:31 server_test_in.go:50: [runtime.GC] end.
+2022/11/05 19:54:31 server_srcTOdstUn_mt_w.go:78: Error: [2] dst_chan is not ok, func exit.
+2022/11/05 19:54:31 server_srcTOdstUn_mt_w.go:61: [2] gorou exit.
+	dst: [localIp:pipe  remoteIp:pipe]
+	unpack  twlen:209715200
+	write time: max:10.0233ms  min:0s  avg:4.969µs  sum:254.4399ms  count:51200
+2022/11/05 19:54:31 server_test_in.go:118: [inTest_server_NetPipe] end.
+2022/11/05 19:54:31 server_test_in.go:120: [pipe run time(sec)]: 2.7550625
+2022/11/05 19:54:31 server_test.go:38: [Test_server_NetPipe_mt] end.
+

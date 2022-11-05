@@ -17,12 +17,7 @@ import (
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gstestpipe"
 )
 
-// var logger_test log.Logger = *gstunnellib.NewFileLogger("server_test.log")
 var logger_test *log.Logger
-
-func init() {
-	logger_test = Logger
-}
 
 func Test_func1(t *testing.T) {
 	logger_test.Println("ok.")
@@ -59,9 +54,8 @@ func inTest_client_NetPipe(t *testing.T, mt_mode bool) {
 	sc := gstestpipe.NewSrcClientNone()
 	gss := gstestpipe.NewGsPiPeDefultKey()
 
-	networkTimeout = time.Minute * 20
 	Mt_model = mt_mode
-	debug_client = true
+	GValues.SetDebug(true)
 
 	testReadTimeOut := time.Second * 100
 	testCacheSize := 200 * 1024 * 1024
@@ -130,9 +124,9 @@ func inTest_client_NetPipe(t *testing.T, mt_mode bool) {
 }
 
 func inTest_client_NetPipe_go_init() {
-	networkTimeout = time.Minute * 20
+
 	Mt_model = true
-	debug_client = true
+	GValues.SetDebug(true)
 }
 
 func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
@@ -204,4 +198,24 @@ func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 
 	//time.Sleep(time.Second * 60)
 	wg_run.Wait()
+}
+
+func inTest_client_timeout(t *testing.T, mt_mode bool) {
+	logger_test.Println("[inTest_client_NetPipe] start.")
+	sc := gstestpipe.NewSrcClientNone()
+	gss := gstestpipe.NewGsPiPeDefultKey()
+
+	networkTimeout = time.Second * 1
+	Mt_model = mt_mode
+	GValues.SetDebug(true)
+
+	//	testReadTimeOut := time.Second * 1
+	//	testCacheSize := 200 * 1024 * 1024
+
+	wg_run := new(sync.WaitGroup)
+
+	run_pipe_test_wg(sc, gss, wg_run)
+
+	time.Sleep(time.Second * 2)
+	logger_test.Println("Func done.")
 }

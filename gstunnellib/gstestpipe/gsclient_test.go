@@ -17,7 +17,7 @@ func Test_GsPiPeImp(t *testing.T) {
 	gc := NewGsPiPeDefultKey()
 	wg := sync.WaitGroup{}
 
-	SendData := gsrand.GetRDBytes(1024 * 1024)
+	SendData := gsrand.GetRDBytes(50 * 1024)
 	//SendData := []byte("123456")
 
 	var rbuf []byte

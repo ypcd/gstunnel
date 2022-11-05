@@ -34,11 +34,11 @@ var bufPool = sync.Pool{
 }
 
 const (
-	POBegin        uint32 = 0
-	POGenOper      uint32 = 1
-	POChangeCryKey uint32 = 2
-	POVersion      uint32 = 3
-	POEnd          uint32 = 4
+	POBegin        uint32 = 1<<5 - 2
+	POGenOper      uint32 = 1<<5 - 1
+	POChangeCryKey uint32 = 1<<6 - 1
+	POVersion      uint32 = 1<<7 - 1
+	POEnd          uint32 = 1 << 7
 )
 
 type packOper struct {
@@ -154,7 +154,7 @@ func createPackOperGen(data []byte) *packOper {
 	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POGenOper,
 		Data:     data,
-		Rand:     GetRDCBytes(int(128 * GetRDF64())),
+		Rand:     GetRDCBytes(int(128 + 256*GetRDF64())),
 	}}
 
 	pd.HashHex = pd.GetSha256()
@@ -169,7 +169,7 @@ func createPackOperChangeKey() *packOper {
 		OperType: POChangeCryKey,
 		OperData: []byte(key),
 		//Rand:     GetRDBytes(8),
-		Rand: GetRDCBytes(int(2048 * GetRDF64())),
+		Rand: GetRDCBytes(int(1024 + 512*GetRDF64())),
 	}}
 
 	pd.HashHex = pd.GetSha256()
@@ -178,7 +178,7 @@ func createPackOperChangeKey() *packOper {
 
 func createPackOperVersion() *packOper {
 
-	rd := GetRDCBytes(int(2048 * GetRDF64()))
+	rd := GetRDCBytes(int(1024 + 512*GetRDF64()))
 	//rd := GetRDBytes(8)
 
 	pd := packOper{PackOperPro: PackOperPro{

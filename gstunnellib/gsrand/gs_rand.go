@@ -110,3 +110,14 @@ func GetrandString(Len int) string {
 	}
 	return string(v1)
 }
+
+func GetrandStringPlus(Len int) string {
+	var strpool = []byte(
+		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`~!@#$%^&*()-_=+[{]}|;:',<.>/?",
+	)
+	v1 := make([]byte, Len)
+	for i := 0; i < Len; i++ {
+		v1[i] = strpool[GetRDCInt_max(int64(len(strpool)))]
+	}
+	return string(v1)
+}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func Test_gs_log(t *testing.T) {
@@ -33,10 +34,12 @@ func Test_gs_log(t *testing.T) {
 }
 
 func Test_NewFileLogger(t *testing.T) {
-	lg := NewFileLogger("tmp.log")
+	var outFileName string
+	lg := NewLoggerFileAndStdOutEx("tmp.log", &outFileName)
 	lg.Println("Log test.")
+	time.Sleep(time.Second)
 
-	inf, err := os.Open("tmp.log")
+	inf, err := os.Open(outFileName)
 	CheckError_test(err, t)
 	defer func() {
 		inf.Close()
@@ -48,4 +51,12 @@ func Test_NewFileLogger(t *testing.T) {
 	if !strings.Contains(string(re), "Log test.") {
 		t.Fatal(err)
 	}
+}
+
+func Test_FileNameAddTime1(t *testing.T) {
+	str1 := GetFileNameAddTime("123")
+	_ = str1
+	str2 := GetFileNameAddTime("123.log")
+	str3 := GetFileNameAddTime("123.tmp.log")
+	_, _ = str2, str3
 }

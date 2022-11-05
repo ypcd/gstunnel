@@ -3,9 +3,16 @@ package main
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
 )
+
+func init() {
+	init_client_test()
+	logger_test = Logger
+	networkTimeout = time.Second * 2
+}
 
 func Test_client_NetPipe_st(t *testing.T) {
 	if gstunnellib.RunTime_Debug {
@@ -51,4 +58,22 @@ func Test_client_NetPipe_loop(t *testing.T) {
 		forceGC()
 	}
 	logger_test.Print("[Test_client_NetPipe_loop] end.\n\n")
+}
+
+func Test_client_timeout(t *testing.T) {
+	if gstunnellib.RunTime_Debug {
+		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	}
+	logger_test.Println("[Test_client_timeout] start.")
+	inTest_client_timeout(t, false)
+	logger_test.Print("[Test_client_timeout] end.\n\n")
+}
+
+func Test_client_timeout2(t *testing.T) {
+	if gstunnellib.RunTime_Debug {
+		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	}
+	logger_test.Println("[Test_client_timeout] start.")
+	inTest_client_timeout(t, true)
+	logger_test.Print("[Test_client_timeout] end.\n\n")
 }

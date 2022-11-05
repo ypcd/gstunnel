@@ -17,11 +17,11 @@ func CheckErrorEx(err error, inlogger *log.Logger) {
 	}
 }
 
-func CheckErrorEx_panic(err error, inlogger *log.Logger) {
+func CheckErrorEx_panic(err error) {
 	if err != nil {
-		tmp := make([]byte, 1024*1024)
-		nlen := runtime.Stack(tmp, false)
-		inlogger.Output(3, fmt.Sprintf("Panic error: %s\nstack: %s\n", err.Error(), string(tmp[:nlen])))
+		//tmp := make([]byte, 1024*1024)
+		//nlen := runtime.Stack(tmp, false)
+		//inlogger.Output(3, fmt.Sprintf("Panic error: %s\nstack: %s\n", err.Error(), string(tmp[:nlen])))
 
 		panic(err)
 	}
@@ -55,7 +55,7 @@ func checkError_info(err error) {
 }
 
 func checkError_panic(err error) {
-	CheckErrorEx_panic(err, logger)
+	CheckErrorEx_panic(err)
 }
 
 func CheckError_test(inerr error, t *testing.T) {
@@ -96,5 +96,14 @@ func Panic_Recover(inlog *log.Logger) {
 		nlen := runtime.Stack(tmp, false)
 		inlog.Output(1,
 			fmt.Sprintf("Panic[Func exit] recover msg: %s\nPanic static: %s\n", msg, string(tmp[:nlen])))
+	}
+}
+
+func Panic_Recover_GSCtx(inlog *log.Logger, gctx GsContext) {
+	if msg := recover(); msg != nil {
+		tmp := make([]byte, 1024*1024)
+		nlen := runtime.Stack(tmp, false)
+		inlog.Output(1,
+			fmt.Sprintf("Panic[Func exit] recover msg: [%d] %s\nPanic static: %s\n", gctx.GetGsId(), msg, string(tmp[:nlen])))
 	}
 }

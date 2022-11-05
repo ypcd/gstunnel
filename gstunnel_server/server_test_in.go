@@ -18,12 +18,7 @@ import (
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gstestpipe"
 )
 
-// var logger_test log.Logger = *gstunnellib.NewFileLogger("server_test.log")
 var logger_test *log.Logger
-
-func init() {
-	logger_test = Logger
-}
 
 func Test_func1(t *testing.T) {
 	logger_test.Println("ok.")
@@ -60,9 +55,8 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	ss := gstestpipe.NewServiceServerNone()
 	gsc := gstestpipe.NewGsPiPeDefultKey()
 
-	networkTimeout = time.Minute * 20
 	Mt_model = mt_mode
-	debug_server = true
+	GValues.SetDebug(true)
 
 	testReadTimeOut := time.Second * 1
 	testCacheSize := 200 * 1024 * 1024
@@ -131,13 +125,12 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 }
 
 func inTest_server_NetPipe_errorData(t *testing.T, mt_mode bool) {
-	logger_test.Println("[inTest_server_NetPipe] start.")
+	logger_test.Println("[inTest_server_NetPipe_errorData] start.")
 	ss := gstestpipe.NewServiceServerNone()
-	gsc := gstestpipe.NewGsPiPeErrorKeyDefultKey()
+	gsc := gstestpipe.NewGsPiPeErrorKeyNoKey()
 
-	networkTimeout = time.Minute * 20
 	Mt_model = mt_mode
-	debug_server = true
+	GValues.SetDebug(true)
 
 	//testReadTimeOut := time.Second * 1
 	testCacheSize := 200 * 1024 * 1024
@@ -159,21 +152,20 @@ func inTest_server_NetPipe_errorData(t *testing.T, mt_mode bool) {
 
 	///////////////////////////////////////////////////////////////////////////
 	_, err := io.Copy(gsc.GetClientConn(), bytes.NewBuffer(SendData))
-	checkError_panic(err)
+	checkError_NoExit(err)
 
 	//////////////////////////////////////////////////////////////////////////
 	wg.Wait()
 }
 
 func inTest_server_NetPipe_errorKey(t *testing.T, mt_mode bool) {
-	logger_test.Println("[inTest_server_NetPipe] start.")
+	logger_test.Println("[inTest_server_NetPipe_errorKey] start.")
 	ss := gstestpipe.NewServiceServerNone()
 	key_error := "123456789012345678901234567890aa"
-	gsc := gstestpipe.NewGsPiPeErrorKey(key_error)
+	gsc := gstestpipe.NewGsPiPeErrorKeyNoKey()
 
-	networkTimeout = time.Minute * 20
 	Mt_model = mt_mode
-	debug_server = true
+	GValues.SetDebug(true)
 
 	//testReadTimeOut := time.Second * 1
 	testCacheSize := 200 * 1024 * 1024
@@ -191,11 +183,11 @@ func inTest_server_NetPipe_errorKey(t *testing.T, mt_mode bool) {
 	//rbuff := bytes.Buffer{}
 	logger_test.Println("testCacheSize[MiB]:", testCacheSize/1024/1024)
 
-	logger_test.Println("inTest_server_NetPipe data transfer start.")
+	logger_test.Println("inTest_server_NetPipe_errorKey data transfer start.")
 
 	///////////////////////////////////////////////////////////////////////////
 	pack1 := gstunnellib.NewGsPackNet(key_error)
-	pdata := pack1.Packing(gsrand.GetRDBytes(1024 * 1024 * 10))
+	pdata := pack1.Packing(gsrand.GetRDBytes(50 * 1024))
 	_, err := io.Copy(gsc.GetClientConn(), bytes.NewBuffer(pdata))
 	checkError_panic(err)
 
@@ -205,9 +197,9 @@ func inTest_server_NetPipe_errorKey(t *testing.T, mt_mode bool) {
 }
 
 func inTest_server_NetPipe_go_init() {
-	networkTimeout = time.Minute * 20
+
 	Mt_model = true
-	debug_server = true
+	GValues.SetDebug(true)
 }
 
 func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
@@ -275,4 +267,24 @@ func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 
 	//time.Sleep(time.Second * 60)
 	wg_run.Wait()
+}
+
+func inTest_server_timeout(t *testing.T, mt_mode bool) {
+	logger_test.Println("[inTest_server_NetPipe] start.")
+	ss := gstestpipe.NewServiceServerNone()
+	gsc := gstestpipe.NewGsPiPeDefultKey()
+
+	networkTimeout = time.Second * 1
+	Mt_model = mt_mode
+	GValues.SetDebug(true)
+
+	//	testReadTimeOut := time.Second * 1
+	//	testCacheSize := 200 * 1024 * 1024
+
+	wg_run := new(sync.WaitGroup)
+
+	run_pipe_test_wg(ss.GetClientConn(), gsc.GetConn(), wg_run)
+
+	time.Sleep(time.Second * 2)
+	logger_test.Println("Func done.")
 }

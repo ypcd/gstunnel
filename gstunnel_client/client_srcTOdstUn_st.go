@@ -13,18 +13,23 @@ import (
 	"net"
 	"os"
 	"sync/atomic"
+	"time"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
 	"github.com/ypcd/gstunnel/v6/timerm"
 )
 
-func srcTOdstUn_st(src net.Conn, dst net.Conn) {
-	defer gstunnellib.Panic_Recover(Logger)
+func srcTOdstUn_st(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
+	defer gstunnellib.Panic_Recover_GSCtx(Logger, gctx)
 	defer src.Close()
 	defer dst.Close()
 
-	tmr_out := timerm.CreateTimer(networkTimeout)
+	//tmr_out := timerm.CreateTimer(networkTimeout)
 	tmrP2 := timerm.CreateTimer(tmr_display_time)
+
+	nt_read := gstunnellib.NewNetTimeImpName("read")
+	nt_write := gstunnellib.NewNetTimeImpName("write")
+	var timer1, timew1 time.Time
 
 	//recot_un_r := timerm.CreateRecoTime()
 	//recot_un_w := timerm.CreateRecoTime()
@@ -47,12 +52,16 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 	defer func() {
 		GRuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
 		GRuntimeStatistics.AddSrcTotalNetData_send(int(wlent))
-		log_List.GSNetIOLen.Printf("gorou exit.\n\t%s\t%s\tunpack  trlen:%d  twlen:%d\n",
+		log_List.GSNetIOLen.Printf("[%d] gorou exit.\n\t%s\t%s\tunpack  trlen:%d  twlen:%d\n\t%s\t%s",
+			gctx.GetGsId(),
 			gstunnellib.GetNetConnAddrString("src", src),
 			gstunnellib.GetNetConnAddrString("dst", dst),
-			rlent, wlent)
+			rlent, wlent,
+			nt_read.PrintString(),
+			nt_write.PrintString(),
+		)
 
-		if debug_client {
+		if GValues.GetDebug() {
 
 			//	Logger.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 
@@ -63,24 +72,27 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 
 	for {
 		//	recot_un_r.Run()
+		src.SetReadDeadline(time.Now().Add(networkTimeout))
+		timer1 = time.Now()
 		rlen, err := src.Read(rbuf)
+		rlent += int64(rlen)
 		//	recot_un_r.Run()
 		if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 			errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
-			checkError_info(err)
+			checkError_info_GsCtx(err, gctx)
 			return
 		} else {
-			checkError_panic(err)
+			checkError_panic_GsCtx(err, gctx)
 		}
+		nt_read.Add(time.Now().Sub(timer1))
 
 		pf("trlen:%d  rlen:%d\n", rlent, rlen)
-
-		rlent += int64(rlen)
-
-		if tmr_out.Run() {
-			Logger.Println("Error: Time out, func exit.")
-			return
-		}
+		/*
+			if tmr_out.Run() {
+				Logger.Printf("Error: [%d] Time out, func exit.\n", gctx.GetGsId())
+				return
+			}
+		*/
 		if rlen == 0 {
 			Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
@@ -90,23 +102,28 @@ func srcTOdstUn_st(src net.Conn, dst net.Conn) {
 			continue
 		}
 
-		tmr_out.Boot()
+		//tmr_out.Boot()
 
 		apack.WriteEncryData(rbuf[:rlen])
 		wbuf, err = apack.GetDecryData()
-		checkError_panic(err)
+		checkError_panic_GsCtx(err, gctx)
 		if len(wbuf) > 0 {
+			dst.SetWriteDeadline(time.Now().Add(networkTimeout))
+			timew1 = time.Now()
 			rn, err := io.Copy(dst, bytes.NewBuffer(wbuf))
 			wlent += rn
-			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, io.EOF) {
-				checkError_info(err)
+			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
+				errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
+				checkError_info_GsCtx(err, gctx)
 				return
 			} else {
-				checkError_panic(err)
+				checkError_panic_GsCtx(err, gctx)
 			}
+			nt_write.Add(time.Now().Sub(timew1))
+			//tmr_out.Boot()
 		}
 
-		if tmrP2.Run() && debug_client {
+		if tmrP2.Run() && GValues.GetDebug() {
 			Logger.Printf("unpack  trlen:%d  twlen:%d\n", rlent, wlent)
 			Logger.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
 

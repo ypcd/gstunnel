@@ -80,8 +80,8 @@ type ftype func()
 
 func mtF(frun ftype) {
 	for i := 0; i < 16; i++ {
-		go frun()
 		wlist.Add(1)
+		go frun()
 	}
 	p("go")
 	wlist.Wait()
@@ -128,7 +128,7 @@ func Test_MtAest(t *testing.T) {
 
 func Test_Aestpack(t *testing.T) {
 
-	fbuf := GetRDCBytes(1024 * 1024)
+	fbuf := GetRDCBytes(50000)
 
 	a1 := NewGsPack(GetrandString(32))
 
@@ -145,9 +145,29 @@ func Test_Aestpack(t *testing.T) {
 
 }
 
+func Test_Aestpack2(t *testing.T) {
+
+	fbuf := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`~!@#$%^&*()-_=+[{]}|;:',<.>/?")
+
+	a1 := NewGsPack(GetrandString(32))
+
+	tmp := a1.Packing(fbuf)
+	t.Log(tmp[len(tmp)-3:])
+	outbuf, _ := a1.Unpack(tmp)
+
+	if bytes.Equal(fbuf, outbuf) {
+		t.Log("ok.")
+		fmt.Printf("%s  %p\n", getsha1(fbuf), fbuf)
+		fmt.Printf("%s  %p\n", getsha1(outbuf), outbuf)
+	} else {
+		t.Error()
+	}
+
+}
+
 func aestpack() {
 
-	fbuf := GetRDCBytes(1024 * 1024)
+	fbuf := GetRDCBytes(50 * 1024)
 
 	a1 := NewGsPack(GetrandString(32))
 	tmp := a1.Packing(fbuf)
@@ -340,7 +360,7 @@ func Test_compress(t *testing.T) {
 
 func Test_GsPack(t *testing.T) {
 
-	fbuf := GetRDCBytes(1024 * 1024)
+	fbuf := GetRDCBytes(50 * 1024)
 
 	a1 := NewGsPack("5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ")
 
@@ -388,9 +408,9 @@ func Test_pack_type_size(t *testing.T) {
 	t.Log(len(ap1.IsTheVersionConsistent()))
 }
 
-func Test_gspack_pack_unpack_run_m(t *testing.T) {
+func Test_gspack_pack_unpack_run_loop(t *testing.T) {
 	pn := NewGsPack("12345678901234567890123456789012")
-	rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(1024 * 1024)))
+	rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(50 * 1024)))
 	encrydata := pn.Packing(rawdata)
 
 	for i := 0; i < 10; i++ {
@@ -404,13 +424,27 @@ func Test_gspack_pack_unpack_run_m(t *testing.T) {
 
 func Test_gspacknet_pack_unpack_2(t *testing.T) {
 	pn := NewGsPack("12345678901234567890123456789012")
-	rawdata := GetRDBytes(1024 * 1024)
+	rawdata := GetRDBytes(50 * 1024)
 	encrydata := pn.Packing(rawdata)
 
 	decrydata, err := pn.Unpack([]byte(encrydata))
 	checkError_panic(err)
 	if !bytes.Equal(rawdata, decrydata) {
 		checkError_panic(errors.New("Rawdata != decrydata."))
+	}
+}
+
+func Test_gspack_pack_unpack_3(t *testing.T) {
+	pn := NewGsPack("12345678901234567890123456789012")
+
+	for i := 0; i < 10; i++ {
+		rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(50 * 1024)))
+		encrydata := pn.Packing(rawdata)
+		decrydata, err := pn.Unpack(encrydata)
+		CheckError_test(err, t)
+		if !bytes.Equal(rawdata, decrydata) {
+			t.Fatal("error.")
+		}
 	}
 }
 
@@ -422,7 +456,8 @@ func Test_base64_bytes(t *testing.T) {
 	base64.StdEncoding.Encode(endata, rawdata)
 	re, err := base64.StdEncoding.Decode(dedata, endata)
 	dedata = dedata[:re]
-	_ = re
+
+	fmt.Println(float64(len(endata)) / float64(len(rawdata)))
 	if err != nil {
 		t.Fatal(err)
 	}

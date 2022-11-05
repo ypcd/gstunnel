@@ -7,6 +7,7 @@ func CloseChan(c interface{}) {
 	if !ok {
 		checkError_panic(errors.New("Error: The c is not chan []byte."))
 	}
+	defer Panic_Recover(logger)
 	select {
 	case _, ok = <-chan1:
 		if ok {

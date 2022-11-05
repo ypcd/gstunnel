@@ -1,6 +1,7 @@
 package gstunnellib
 
 import (
+	"encoding/binary"
 	"errors"
 )
 
@@ -34,7 +35,7 @@ func (pn *gsPackNetImp) WriteEncryData(data []byte) error {
 	pn.buf = append(pn.buf, data...)
 	return nil
 }
-func (pn *gsPackNetImp) GetDecryData() ([]byte, error) {
+func (pn *gsPackNetImp) GetDecryData_old() ([]byte, error) {
 
 	var rebuf []byte
 	for {
@@ -55,6 +56,34 @@ func (pn *gsPackNetImp) GetDecryData() ([]byte, error) {
 	}
 }
 
+func (pn *gsPackNetImp) GetDecryData() ([]byte, error) {
+
+	var rebuf []byte
+	var wbuf []byte
+	for {
+
+		rn := GetGSPackSize(pn.buf[:2])
+		if int64(2+rn) > int64(len(pn.buf)) {
+			return rebuf, nil
+		}
+		if int64(2+rn) == int64(len(pn.buf)) {
+			wbuf = pn.buf[:2+rn]
+			pn.buf = nil
+		} else {
+			wbuf = pn.buf[:2+rn]
+			pn.buf = pn.buf[2+rn:]
+		}
+		wbuf, err := pn.apack.Unpack(wbuf)
+		checkError_panic(err)
+		if len(wbuf) > 0 {
+			rebuf = append(rebuf, wbuf...)
+		}
+		if len(pn.buf) < 2 {
+			return rebuf, nil
+		}
+	}
+}
+
 func (pn *gsPackNetImp) Packing(data []byte) []byte {
 	return pn.apack.Packing(data)
 }
@@ -67,4 +96,9 @@ func (pn *gsPackNetImp) ChangeCryKey() []byte {
 }
 func (pn *gsPackNetImp) IsTheVersionConsistent() []byte {
 	return pn.apack.IsTheVersionConsistent()
+}
+
+func GetGSPackSize(data []byte) uint16 {
+	sz := binary.BigEndian.Uint16(data)
+	return sz
 }

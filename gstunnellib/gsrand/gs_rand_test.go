@@ -79,6 +79,12 @@ func Test_getrandString(t *testing.T) {
 	}
 }
 
+func Test_getrandString2(t *testing.T) {
+	for i := 0; i < 1000; i++ {
+		fmt.Println(GetrandStringPlus(32))
+	}
+}
+
 func Test_getbytes(t *testing.T) {
 	rd := make([]byte, 16)
 	_, err := randc.Reader.Read(rd)

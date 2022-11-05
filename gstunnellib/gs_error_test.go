@@ -35,3 +35,7 @@ func Test_CheckError_info(t *testing.T) {
 	checkError_info(errors.New("Hello."))
 	//checkError(errors.New("123"))
 }
+
+func noTest_panic(t *testing.T) {
+	checkError_panic(errors.New("error."))
+}

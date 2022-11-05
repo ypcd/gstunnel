@@ -356,3 +356,12 @@ func Test_randSize_sort(t *testing.T) {
 	fmt.Printf("len:  %v  \n", list_p2)
 	fmt.Printf("len:  %v  \n", list_p3)
 }
+
+func Test_operType_bin(t *testing.T) {
+	fmt.Printf("operType bin: %b  %b  %b  %b  %b\n",
+		POBegin,
+		POGenOper,
+		POChangeCryKey,
+		POVersion,
+		POEnd)
+}
