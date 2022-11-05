@@ -89,7 +89,7 @@ http proxy（squid3等）、email、socks 5 proxy等基于tcp开发的应用。
 ```
 在intel i5-1135G7 2.40GHz cpu(低压cpu，笔记本电脑cpu）配置:
 
-gstunnel（v6.2.30.2)可以实现单端（gstunnel server或gstunnel client）超过120MBytes/s的性能。
+gstunnel（v6.2.30.8)可以实现单端（gstunnel server或gstunnel client）超过140MBytes/s的性能。
 ```
 
 gstunnel分为client和server两部分。
@@ -280,7 +280,7 @@ Performance Performance:
 ```
 intel i5-1135G7 2.40GHz cpu(low-voltage cpu, laptop cpu) configuration:
 
-gstunnel (v6.2.30.2) can achieve single-ended (gstunnel server or gstunnel client) performance of more than 120MBytes/s.
+gstunnel (v6.2.30.8) can achieve single-ended (gstunnel server or gstunnel client) performance of more than 140MBytes/s.
 ```
 
 gstunnel is divided into client and server parts.
