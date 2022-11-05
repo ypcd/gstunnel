@@ -26,6 +26,7 @@ func (t *Timer) Run() bool {
 func (t *Timer) Boot() {
 	t.oldtime = time.Now()
 }
+
 func CreateTimer(timeout time.Duration) Timer {
 	t1 := Timer{time.Now(), timeout}
 	return t1
