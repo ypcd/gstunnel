@@ -1,7 +1,11 @@
 
 ![image](https://github.com/ypcd/gstunnel/blob/master/img/gstunnel%20flow%20Diagram.png)
 
-![image](https://github.com/ypcd/gstunnel/blob/master/img/gstunnel%20Class%20Diagram.png)
+![image](https://github.com/ypcd/gstunnel/blob/master/img/%E7%B1%BB%E5%9B%BE1.png)
+![image](https://github.com/ypcd/gstunnel/blob/master/img/%E7%B1%BB%E5%9B%BE2.png)
+![image](https://github.com/ypcd/gstunnel/blob/master/img/%E7%B1%BB%E5%9B%BE3.png)
+![image](https://github.com/ypcd/gstunnel/blob/master/img/%E7%B1%BB%E5%9B%BE4.png)
+
 
 gstunnel（go security tunnel，go语言开发的安全网络隧道）
 
