@@ -1,1 +1,2 @@
-go test -race -vet=off -timeout 0 > out.log 2>err.log
+set gorace=log_path=.
+go test -race -vet=off -timeout 0

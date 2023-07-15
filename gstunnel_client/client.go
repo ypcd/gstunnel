@@ -8,14 +8,8 @@ package main
 
 import (
 	"errors"
-	"flag"
-	"fmt"
-	"log"
 	"net"
-	"net/http"
 	_ "net/http/pprof"
-	"os"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -25,155 +19,6 @@ import (
 	"github.com/ypcd/gstunnel/v6/timerm"
 )
 
-const version string = gstunnellib.Version
-
-var GValues = gstunnellib.NewGlobalValuesImp()
-
-var p = gstunnellib.Nullprint
-var pf = gstunnellib.Nullprintf
-
-var fpnull = os.DevNull
-
-var key string
-var key_gen = flag.String("g", "1", "-g key. Generate a random 32-byte key.")
-
-var gsconfig *gstunnellib.GsConfig
-
-var gsconfig_path = flag.String("c", "config.client.json", "The gstunnel config file path.")
-
-var goPackTotal, goUnpackTotal int32 = 0, 0
-
-var Logger *log.Logger
-
-// defult 60s
-var networkTimeout time.Duration
-
-const net_read_size = 4 * 1024
-const netPUn_chan_cache_size = 64
-
-var Mt_model bool = true
-
-// defult 6s
-var tmr_display_time time.Duration
-
-// defult 60s
-var tmr_changekey_time time.Duration
-
-//var bufPool sync.Pool
-
-var GRuntimeStatistics gstunnellib.Runtime_statistics
-
-var log_List gstunnellib.Logger_List
-
-var init_status = false
-
-var gid = gstunnellib.NewGIdImp()
-
-func init_client_run() {
-
-	if init_status {
-		panic(errors.New("The init func is error."))
-	} else {
-		init_status = true
-	}
-
-	flag.Parse()
-	if strings.Contains(strings.ToUpper(*key_gen), strings.ToUpper("key")) {
-		fmt.Println(gstunnellib.GetRDKeyString32())
-		os.Exit(1)
-	}
-	GRuntimeStatistics = gstunnellib.NewRuntimeStatistics()
-
-	log_List.GenLogger = gstunnellib.NewLoggerFileAndStdOut("gstunnel_client.log")
-	log_List.GSIpLogger = gstunnellib.NewLoggerFileAndStdOut("access.log")
-	log_List.GSNetIOLen = gstunnellib.NewLoggerFileAndLog("net_io_len.log", log_List.GenLogger.Writer())
-	log_List.GSIpLogger.Println("Raw client access ip list:")
-
-	Logger = log_List.GenLogger
-
-	Logger.Println("gstunnel client.")
-	Logger.Println("VER:", version)
-
-	gsconfig = gstunnellib.CreateGsconfig(*gsconfig_path)
-	GValues.SetDebug(gsconfig.Debug)
-
-	key = gsconfig.Key
-
-	Mt_model = gsconfig.Mt_model
-
-	tmr_display_time = time.Second * time.Duration(gsconfig.Tmr_display_time)
-	tmr_changekey_time = time.Second * time.Duration(gsconfig.Tmr_changekey_time)
-	networkTimeout = time.Second * time.Duration(gsconfig.NetworkTimeout)
-
-	Logger.Println("debug:", GValues.GetDebug())
-
-	Logger.Println("Mt_model:", Mt_model)
-	Logger.Println("tmr_display_time:", tmr_display_time)
-	Logger.Println("tmr_changekey_time:", tmr_changekey_time)
-	Logger.Println("networkTimeout:", networkTimeout)
-
-	Logger.Println("info_protobuf:", gstunnellib.Info_protobuf)
-
-	if GValues.GetDebug() {
-		go func() {
-			Logger.Fatalln("http server: ", http.ListenAndServe("localhost:6060", nil))
-		}()
-		Logger.Println("Debug server listen: localhost:6060")
-	}
-	//GValues.GetDebug() = false
-	//go gstunnellib.RunGRuntimeStatistics_print(Logger, GRuntimeStatistics)
-}
-
-func init_client_test() {
-	if init_status {
-		panic(errors.New("The init func is error."))
-	} else {
-		init_status = true
-	}
-
-	//	flag.Parse()
-	GRuntimeStatistics = gstunnellib.NewRuntimeStatistics()
-
-	log_List.GenLogger = gstunnellib.NewLoggerFileAndStdOut("gstunnel_client.log")
-	log_List.GSIpLogger = gstunnellib.NewLoggerFileAndStdOut("access.log")
-	log_List.GSNetIOLen = gstunnellib.NewLoggerFileAndLog("net_io_len.log", log_List.GenLogger.Writer())
-	log_List.GSIpLogger.Println("Raw client access ip list:")
-
-	Logger = log_List.GenLogger
-
-	Logger.Println("gstunnel client.")
-	Logger.Println("VER:", version)
-
-	gsconfig = gstunnellib.CreateGsconfig(*gsconfig_path)
-	GValues.SetDebug(gsconfig.Debug)
-
-	key = gsconfig.Key
-
-	Mt_model = gsconfig.Mt_model
-
-	tmr_display_time = time.Second * time.Duration(gsconfig.Tmr_display_time)
-	tmr_changekey_time = time.Second * time.Duration(gsconfig.Tmr_changekey_time)
-	networkTimeout = time.Second * time.Duration(gsconfig.NetworkTimeout)
-
-	Logger.Println("debug:", GValues.GetDebug())
-
-	Logger.Println("Mt_model:", Mt_model)
-	Logger.Println("tmr_display_time:", tmr_display_time)
-	Logger.Println("tmr_changekey_time:", tmr_changekey_time)
-	Logger.Println("networkTimeout:", networkTimeout)
-
-	Logger.Println("info_protobuf:", gstunnellib.Info_protobuf)
-
-	if GValues.GetDebug() {
-		go func() {
-			Logger.Fatalln("http server: ", http.ListenAndServe("localhost:6060", nil))
-		}()
-		Logger.Println("Debug server listen: localhost:6060")
-	}
-	//GValues.GetDebug() = false
-	//go gstunnellib.RunGRuntimeStatistics_print(Logger, GRuntimeStatistics)
-}
-
 func main() {
 	init_client_run()
 	for {
@@ -181,18 +26,68 @@ func main() {
 	}
 }
 
+func createToGstServerConnHandler(chanconnlist <-chan net.Conn, gstServerAddr string) {
+
+	const maxTryConnService int = 5000
+	//var err error
+	for {
+
+		rawClient, ok := <-chanconnlist
+		if !ok {
+			checkError_NoExit(errors.New("'gstServer, ok := <-chanconnlist' is error"))
+			return
+		}
+		g_log_List.GSIpLogger.Printf("ip: %s\n", rawClient.RemoteAddr().String())
+
+		server_conn_error_total := 0
+		tmr := timerm.CreateTimer(time.Second * 10)
+		for {
+			if tmr.Run() {
+				g_Logger.Println("Error: server_conn_error_total: ", server_conn_error_total)
+				tmr.Boot()
+			}
+
+			gstServer, err := net.Dial("tcp", gstServerAddr)
+			//checkError(err)
+			if err != nil {
+				if server_conn_error_total > 1000 {
+					g_Logger.Fatalln("Error: server_conn_error_total > 1000")
+				}
+				server_conn_error_total++
+				g_Logger.Println("Error: [net.Dial('tcp', service)]:", err.Error())
+
+				continue
+			}
+			//g_Logger.Println("conn.", service)
+
+			//acc: 		src---client
+			//dst: 		client---serever
+			//pack: 	acc read recv, dst wirte send.
+			//unpack:	dst read recv, acc wirte send.
+
+			gctx := gstunnellib.NewGsContextImp(g_gid.GenerateId(), g_gsst)
+			g_gsst.GetStatusConnList().Add(gctx.GetGsId(), rawClient, gstServer)
+
+			go srcTOdstP_count(rawClient, gstServer, gctx)
+			go srcTOdstUn_count(gstServer, rawClient, gctx)
+			g_Logger.Printf("go [%d].\n", gctx.GetGsId())
+			break
+		}
+	}
+}
+
 func run() {
-	//defer gstunnellib.Panic_Recover_GSCtx(Logger, gctx)
+	//defer gstunnellib.Panic_Recover_GSCtx(g_Logger, gctx)
 
 	var lstnaddr string
 	var connaddr []string
 
-	lstnaddr = gsconfig.Listen
-	connaddr = gsconfig.GetServers()
+	lstnaddr = g_gsconfig.Listen
+	connaddr = g_gsconfig.GetServers()
 
-	Logger.Println("Listen_Addr:", lstnaddr)
-	Logger.Println("Conn_Addr:", connaddr)
-	Logger.Println("Begin......")
+	g_Logger.Println("Listen_Addr:", lstnaddr)
+	g_Logger.Println("Conn_Addr:", connaddr)
+	g_Logger.Println("Begin......")
 
 	service := lstnaddr
 	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
@@ -200,67 +95,66 @@ func run() {
 	listener, err := net.ListenTCP("tcp", tcpAddr)
 	checkError(err)
 
+	chanConnList := make(chan net.Conn, 1024)
+	defer close(chanConnList)
+
+	for i := 0; i < g_connHandleGoNum; i++ {
+		go createToGstServerConnHandler(chanConnList, connaddr[0])
+	}
 	for {
-		acc, err := listener.Accept()
+		rawClient, err := listener.Accept()
 		if err != nil {
-			Logger.Println("Error:", err)
+			g_Logger.Println("Error:", err)
 			continue
 		}
-		log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
+		chanConnList <- rawClient
+	}
+}
 
-		server_conn_error_total := 0
-		tmr := timerm.CreateTimer(time.Second * 10)
-		for {
-			if tmr.Run() {
-				Logger.Println("Error: server_conn_error_total: ", server_conn_error_total)
-				server_conn_error_total = 0
-				tmr.Boot()
-			}
-			service := gsconfig.GetServers()[0]
+func run_pipe_test_listen(lstnAddr, connAddr string) {
 
-			dst, err := net.Dial("tcp", service)
-			//checkError(err)
-			if err != nil {
-				if server_conn_error_total > 1000 {
-					fmt.Fprintln(os.Stderr, "Error: server_conn_error_total > 10000")
-					Logger.Fatalln("Error: server_conn_error_total > 10000")
-				}
-				server_conn_error_total++
-				Logger.Println("Error: [net.Dial('tcp', service)]:", err.Error())
-				fmt.Fprintln(os.Stderr, "Error: [net.Dial('tcp', service)]:", err.Error())
+	g_Logger.Println("Listen_Addr:", lstnAddr)
+	g_Logger.Println("Conn_Addr:", connAddr)
+	g_Logger.Println("Begin......")
 
-				continue
-			}
-			Logger.Println("conn.", service)
+	service := lstnAddr
+	tcpAddr, err := net.ResolveTCPAddr("tcp4", service)
+	checkError(err)
+	listener, err := net.ListenTCP("tcp", tcpAddr)
+	checkError(err)
 
-			//acc: 		src---client
-			//dst: 		client---serever
-			//pack: 	acc read recv, dst wirte send.
-			//unpack:	dst read recv, acc wirte send.
+	chanConnList := make(chan net.Conn, 1024)
+	defer close(chanConnList)
 
-			gctx := gstunnellib.NewGsContextImp(gid.GetId())
-			go srcTOdstP_count(acc, dst, gctx)
-			go srcTOdstUn_count(dst, acc, gctx)
-			break
+	for i := 0; i < g_connHandleGoNum; i++ {
+		go createToGstServerConnHandler(chanConnList, connAddr)
+	}
+	for {
+		rawClient, err := listener.Accept()
+		if err != nil {
+			g_Logger.Println("Error:", err)
+			continue
 		}
-		Logger.Println("go.")
+		chanConnList <- rawClient
 	}
 }
 
 func run_pipe_test_wg(sc gstestpipe.RawdataPiPe, gss gstestpipe.GsPiPe, wg *sync.WaitGroup) {
-	//defer gstunnellib.Panic_Recover_GSCtx(Logger, gctx)
+	//defer gstunnellib.Panic_Recover_GSCtx(g_Logger, gctx)
 
 	acc := sc.GetServerConn()
 	dst := gss.GetConn()
 
-	Logger.Println("Test_Mt_model:", Mt_model)
-	log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
+	g_Logger.Println("Test_Mt_model:", g_Mt_model)
+	g_log_List.GSIpLogger.Printf("ip: %s\n", acc.RemoteAddr().String())
 
-	gctx := gstunnellib.NewGsContextImp(gid.GetId())
+	gctx := gstunnellib.NewGsContextImp(g_gid.GenerateId(), g_gsst)
+	g_gsst.GetStatusConnList().Add(gctx.GetGsId(), acc, dst)
+
 	wg.Add(2)
 	go srcTOdstP_wg(acc, dst, wg, gctx)
 	go srcTOdstUn_wg(dst, acc, wg, gctx)
-	Logger.Println("Gstunnel go.")
+	g_Logger.Println("Gstunnel go.")
 
 }
 
@@ -269,16 +163,16 @@ func find0(v1 []byte) (int, bool) {
 }
 
 func srcTOdstP_count(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
-	atomic.AddInt32(&goPackTotal, 1)
+	atomic.AddInt32(&g_goPackTotal, 1)
 	srcTOdstP(src, dst, gctx)
-	atomic.AddInt32(&goPackTotal, -1)
+	atomic.AddInt32(&g_goPackTotal, -1)
 
 }
 
 func srcTOdstUn_count(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
-	atomic.AddInt32(&goUnpackTotal, 1)
+	atomic.AddInt32(&g_goUnpackTotal, 1)
 	srcTOdstUn(src, dst, gctx)
-	atomic.AddInt32(&goUnpackTotal, -1)
+	atomic.AddInt32(&g_goUnpackTotal, -1)
 }
 
 func IsTheVersionConsistent_send(dst net.Conn, apack gstunnellib.GsPack, wlent *int64) error {
@@ -290,7 +184,7 @@ func ChangeCryKey_send(dst net.Conn, apack gstunnellib.GsPack, ChangeCryKey_Tota
 }
 
 func srcTOdstP(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
-	if Mt_model {
+	if g_Mt_model {
 		srcTOdstP_mt(src, dst, gctx)
 	} else {
 		srcTOdstP_st(src, dst, gctx)
@@ -298,7 +192,7 @@ func srcTOdstP(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
 }
 
 func srcTOdstUn(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
-	if Mt_model {
+	if g_Mt_model {
 		srcTOdstUn_mt(src, dst, gctx)
 	} else {
 		srcTOdstUn_st(src, dst, gctx)
@@ -307,7 +201,7 @@ func srcTOdstUn(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
 
 func srcTOdstP_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup, gctx gstunnellib.GsContext) {
 	defer wg.Done()
-	if Mt_model {
+	if g_Mt_model {
 		srcTOdstP_mt(src, dst, gctx)
 	} else {
 		srcTOdstP_st(src, dst, gctx)
@@ -316,7 +210,7 @@ func srcTOdstP_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup, gctx gstunnell
 
 func srcTOdstUn_wg(src net.Conn, dst net.Conn, wg *sync.WaitGroup, gctx gstunnellib.GsContext) {
 	defer wg.Done()
-	if Mt_model {
+	if g_Mt_model {
 		srcTOdstUn_mt(src, dst, gctx)
 	} else {
 		srcTOdstUn_st(src, dst, gctx)

@@ -10,13 +10,13 @@ import (
 
 func init() {
 	init_client_test()
-	logger_test = Logger
-	networkTimeout = time.Second * 2
+	logger_test = g_Logger
+	g_networkTimeout = time.Second * 10
 }
 
 func Test_client_NetPipe_st(t *testing.T) {
-	if gstunnellib.RunTime_Debug {
-		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	if gstunnellib.G_RunTime_Debug {
+		defer gstunnellib.G_RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
 	}
 	logger_test.Print("\n\n")
 	logger_test.Println("[Test_client_NetPipe_st] start.")
@@ -24,8 +24,8 @@ func Test_client_NetPipe_st(t *testing.T) {
 	logger_test.Print("[Test_client_NetPipe_st] end.\n\n")
 }
 func Test_client_NetPipe_mt(t *testing.T) {
-	if gstunnellib.RunTime_Debug {
-		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	if gstunnellib.G_RunTime_Debug {
+		defer gstunnellib.G_RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
 	}
 	logger_test.Println()
 	logger_test.Println("[Test_client_NetPipe_mt] start.")
@@ -34,8 +34,8 @@ func Test_client_NetPipe_mt(t *testing.T) {
 }
 
 func Test_client_NetPipe_m(t *testing.T) {
-	if gstunnellib.RunTime_Debug {
-		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	if gstunnellib.G_RunTime_Debug {
+		defer gstunnellib.G_RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
 	}
 	logger_test.Println("[Test_client_NetPipe_m] start.")
 	//inTest_client_NetPipe_m(t)
@@ -61,8 +61,8 @@ func Test_client_NetPipe_loop(t *testing.T) {
 }
 
 func Test_client_timeout(t *testing.T) {
-	if gstunnellib.RunTime_Debug {
-		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	if gstunnellib.G_RunTime_Debug {
+		defer gstunnellib.G_RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
 	}
 	logger_test.Println("[Test_client_timeout] start.")
 	inTest_client_timeout(t, false)
@@ -70,8 +70,8 @@ func Test_client_timeout(t *testing.T) {
 }
 
 func Test_client_timeout2(t *testing.T) {
-	if gstunnellib.RunTime_Debug {
-		defer gstunnellib.RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
+	if gstunnellib.G_RunTime_Debug {
+		defer gstunnellib.G_RunTimeDebugInfo1.WriteFile("debugInfo.out.json")
 	}
 	logger_test.Println("[Test_client_timeout] start.")
 	inTest_client_timeout(t, true)

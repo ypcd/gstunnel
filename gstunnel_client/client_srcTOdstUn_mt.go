@@ -20,63 +20,61 @@ import (
 )
 
 func srcTOdstUn_mt(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
-	defer gstunnellib.Panic_Recover_GSCtx(Logger, gctx)
+	defer gstunnellib.Panic_Recover_GSCtx(g_Logger, gctx)
 
-	//tmr_out := timerm.CreateTimer(networkTimeout)
-	tmrP2 := timerm.CreateTimer(tmr_display_time)
+	//tmr_out := timerm.CreateTimer(g_networkTimeout)
+	tmrP2 := timerm.CreateTimer(g_tmr_display_time)
 
 	nt_read := gstunnellib.NewNetTimeImpName("read")
 	var timer1 time.Time
 
 	//recot_un_r := timerm.CreateRecoTime()
 
-	fp1 := "SUrecv.data"
-	fp2 := "SUsend.data"
-	fp1 = fpnull
-	fp2 = fpnull
-	_, _ = fp1, fp2
+	//	fp1 := "SUrecv.data"
+	//	fp2 := "SUsend.data"
+	//	fp1 = g_fpnull
+	//	fp2 = g_fpnull
+	//	_, _ = fp1, fp2
 
-	var err error
-	_ = err
-
-	defer src.Close()
-	defer dst.Close()
+	//	var err error
+	//	_ = err
 
 	var buf []byte
 	rlent := int64(0)
 
-	dst_chan := make(chan []byte, netPUn_chan_cache_size)
+	dst_chan := make(chan []byte, g_netPUn_chan_cache_size)
 	wg_w := new(sync.WaitGroup)
 
-	dst_ok := gstunnellib.NewGorouStatus()
+	dst_ok := gstunnellib.NewGorouStatusNetConn([]net.Conn{src, dst})
 	defer func() {
-		gstunnellib.CloseChan(dst_chan)
+		dst.Close()
+		src.Close()
+		gstunnellib.ChanClose(dst_chan)
 		wg_w.Wait()
 	}()
 
 	wg_w.Add(1)
 	go srcTOdstUn_w(dst, dst_chan, dst_ok, wg_w, gctx)
-	dst = nil
 
 	defer func() {
-		GRuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
-		log_List.GSNetIOLen.Printf("[%d] gorou exit.\n\t%s\tunpack  trlen:%d\n\t%s",
+		g_RuntimeStatistics.AddServerTotalNetData_recv(int(rlent))
+		g_log_List.GSNetIOLen.Printf("[%d] gorou exit.\n\t%s\tunpack  trlen:%d\n\t%s",
 			gctx.GetGsId(), gstunnellib.GetNetConnAddrString("src", src), rlent,
 			nt_read.PrintString(),
 		)
 
-		if GValues.GetDebug() {
-			//Logger.Println("\tgoUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
+		if g_Values.GetDebug() {
+			//g_Logger.Println("\tgoUnpackTotal:", atomic.LoadInt32(&g_goUnpackTotal))
 
-			//	Logger.Println("\tRecoTime_un_r All: ", recot_un_r.StringAll())
+			//	g_Logger.Println("\tRecoTime_un_r All: ", recot_un_r.StringAll())
 		}
 	}()
 
 	for dst_ok.IsOk() {
-		buf = make([]byte, net_read_size)
+		buf = make([]byte, g_net_read_size)
 
 		//recot_un_r.Run()
-		src.SetReadDeadline(time.Now().Add(networkTimeout))
+		src.SetReadDeadline(time.Now().Add(g_networkTimeout))
 		timer1 = time.Now()
 		rlen, err := src.Read(buf)
 		rlent += int64(rlen)
@@ -88,39 +86,35 @@ func srcTOdstUn_mt(src net.Conn, dst net.Conn, gctx gstunnellib.GsContext) {
 		} else {
 			checkError_panic_GsCtx(err, gctx)
 		}
-		nt_read.Add(time.Now().Sub(timer1))
+		nt_read.Add(time.Since(timer1))
 
-		pf("trlen:%d  rlen:%d\n", rlent, rlen)
+		//pf("trlen:%d  rlen:%d\n", rlent, rlen)
 		/*
 			if tmr_out.Run() {
-				Logger.Printf("Error: [%d] Time out, func exit.\n", gctx.GetGsId())
+				g_Logger.Printf("Error: [%d] Time out, func exit.\n", gctx.GetGsId())
 				return
 			}
 		*/
-		if rlen == 0 {
-			Logger.Println("Error: src.read() rlen==0 func exit.")
+		if rlen <= 0 {
+			g_Logger.Println("Error: src.read() rlen==0 func exit.")
 			return
 		}
 		if err != nil {
-			Logger.Println("Error:", err)
+			g_Logger.Println("Error:", err)
 			continue
 		}
 
 		//tmr_out.Boot()
-		buf = buf[:rlen]
-		if len(buf) <= 0 {
-			continue
-		}
 
-		dst_chan <- buf
+		dst_chan <- buf[:rlen]
 		buf = nil
 
-		if tmrP2.Run() && GValues.GetDebug() {
-			Logger.Printf("unpack  trlen:%d\n", rlent)
-			Logger.Println("goUnpackTotal:", atomic.LoadInt32(&goUnpackTotal))
+		if tmrP2.Run() && g_Values.GetDebug() {
+			g_Logger.Printf("unpack  trlen:%d\n", rlent)
+			g_Logger.Println("g_goUnpackTotal:", atomic.LoadInt32(&g_goUnpackTotal))
 
-			//Logger.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
+			//g_Logger.Println("RecoTime_un_r All: ", recot_un_r.StringAll())
 		}
 	}
-	Logger.Println("Func exit.")
+	g_Logger.Println("Func exit.")
 }

@@ -41,13 +41,9 @@ type RecoTime struct {
 func (t *RecoTime) Run() int64 {
 	t2 := time.Since(t.oldtime).Microseconds()
 
-	if t.min == 0 {
+	if t.min == -1 {
 		t.min = t2
-	}
-	if t.max == 0 {
-		t.max = t2
-	}
-	if t2 < t.min {
+	} else if t2 < t.min {
 		t.min = t2
 	}
 	if t2 > t.max {
@@ -70,5 +66,5 @@ func (t *RecoTime) StringAll() string {
 }
 
 func CreateRecoTime() *RecoTime {
-	return &RecoTime{oldtime: time.Now(), min: 0, max: 0, avg: 0}
+	return &RecoTime{oldtime: time.Now(), min: -1, max: -1, avg: 0}
 }
