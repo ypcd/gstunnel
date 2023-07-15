@@ -14,7 +14,7 @@ import (
 )
 
 func Test_GsPiPeImp(t *testing.T) {
-	gc := NewGsPiPeDefultKey()
+	gc := NewGstPiPoDefaultKey()
 	wg := sync.WaitGroup{}
 
 	SendData := gsrand.GetRDBytes(50 * 1024)
@@ -22,7 +22,7 @@ func Test_GsPiPeImp(t *testing.T) {
 
 	var rbuf []byte
 	//rbuff := bytes.Buffer{}
-	apack := gstunnellib.NewGsPackNet(key_defult)
+	apack := gstunnellib.NewGsPackNet(g_key_Default)
 
 	server := gc.GetConn()
 	wg.Add(1)

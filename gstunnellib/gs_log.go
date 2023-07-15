@@ -1,8 +1,10 @@
 package gstunnellib
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path"
@@ -24,6 +26,15 @@ func GetNowTimeString() string {
 }
 
 func GetFileNameAddTime(FileName string) string {
+
+	err := os.Mkdir("logs", 0774)
+	if err != nil {
+		if !errors.Is(err, fs.ErrExist) {
+			panic(err)
+		}
+	}
+	FileName = "logs/" + FileName
+
 	rn := strings.IndexAny(FileName, ".")
 	if rn == -1 {
 		return FileName + "_" + GetNowTimeString() + "_"
@@ -41,7 +52,7 @@ func GetExeDir() string {
 	return d1
 }
 
-func NewLoggerFileAndStdOutEx(FileName string, outFileName *string) *log.Logger {
+func newLoggerFileAndStdOutEx(FileName string, outFileName *string) *log.Logger {
 	var filePath string = GetFileNameAddTime(FileName)
 	if outFileName != nil {
 		*outFileName = filePath
@@ -57,7 +68,7 @@ func NewLoggerFileAndStdOutEx(FileName string, outFileName *string) *log.Logger 
 			fmt.Println("word dir:", dir)
 	*/
 	lf, err := os.Create(filePath)
-	checkError_exit(err)
+	CheckError_exit(err)
 
 	lws := io.MultiWriter(lf, os.Stdout)
 	log1 := log.New(lws, "", log.Lshortfile|log.LstdFlags|log.Lmsgprefix)
@@ -65,7 +76,7 @@ func NewLoggerFileAndStdOutEx(FileName string, outFileName *string) *log.Logger 
 }
 
 func NewLoggerFileAndStdOut(FileName string) *log.Logger {
-	return NewLoggerFileAndStdOutEx(FileName, nil)
+	return newLoggerFileAndStdOutEx(FileName, nil)
 }
 
 func NewLoggerFile(FileName string) *log.Logger {
@@ -81,7 +92,7 @@ func NewLoggerFile(FileName string) *log.Logger {
 			fmt.Println("word dir:", dir)
 	*/
 	lf, err := os.Create(filePath)
-	checkError_exit(err)
+	CheckError_exit(err)
 
 	log1 := log.New(lf, "", log.Lshortfile|log.LstdFlags|log.Lmsgprefix)
 	return log1
@@ -100,7 +111,7 @@ func NewLoggerFileAndLog(FileName string, inlog io.Writer) *log.Logger {
 			fmt.Println("word dir:", dir)
 	*/
 	lf, err := os.Create(filePath)
-	checkError_exit(err)
+	CheckError_exit(err)
 
 	mw := io.MultiWriter(lf, inlog)
 	log1 := log.New(mw, "", log.Lshortfile|log.LstdFlags|log.Lmsgprefix)

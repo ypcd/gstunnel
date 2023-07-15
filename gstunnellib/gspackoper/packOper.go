@@ -18,7 +18,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const version string = gsbase.Version
+const g_version string = gsbase.G_Version
 
 var debug_tag bool
 
@@ -163,7 +163,7 @@ func createPackOperGen(data []byte) *packOper {
 
 func createPackOperChangeKey() *packOper {
 
-	key := GetRDBytes(32)
+	key := GetRDBytes(gsbase.G_AesKeyLen)
 
 	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POChangeCryKey,
@@ -183,7 +183,7 @@ func createPackOperVersion() *packOper {
 
 	pd := packOper{PackOperPro: PackOperPro{
 		OperType: POVersion,
-		OperData: []byte(version),
+		OperData: []byte(g_version),
 		Rand:     rd,
 	}}
 

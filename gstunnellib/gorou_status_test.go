@@ -2,6 +2,7 @@ package gstunnellib
 
 import (
 	"net"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -44,8 +45,8 @@ func Test_gorou_status_loop(t *testing.T) {
 }
 
 func Test_gorou_status_loop2(t *testing.T) {
-	conn1, _ := net.Pipe()
-	grs := NewGorouStatusNetConn(conn1)
+	conn1, conn2 := net.Pipe()
+	grs := NewGorouStatusNetConn([]net.Conn{conn1, conn2})
 
 	var go_ok int32 = 1
 	defer atomic.SwapInt32(&go_ok, 0)
@@ -66,12 +67,21 @@ func Test_gorou_status_loop2(t *testing.T) {
 		}
 	}()
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 1)
+
+	_, err := conn1.Write([]byte("123456"))
+	if !strings.Contains(err.Error(), "closed") {
+		t.Fatal("Error.")
+	}
+	_, err = conn2.Write([]byte("123456"))
+	if !strings.Contains(err.Error(), "closed") {
+		t.Fatal("Error.")
+	}
 }
 
 func Test_gorou_status_netconn(t *testing.T) {
-	conn1, _ := net.Pipe()
-	g1 := NewGorouStatusNetConn(conn1)
+	conn1, conn2 := net.Pipe()
+	g1 := NewGorouStatusNetConn([]net.Conn{conn1, conn2})
 	if !g1.IsOk() {
 		t.Fatal("error.")
 	}
@@ -79,4 +89,14 @@ func Test_gorou_status_netconn(t *testing.T) {
 	if g1.IsOk() {
 		t.Fatal("error.")
 	}
+
+	_, err := conn1.Write([]byte("123456"))
+	if !strings.Contains(err.Error(), "closed") {
+		t.Fatal("Error.")
+	}
+	_, err = conn2.Write([]byte("123456"))
+	if !strings.Contains(err.Error(), "closed") {
+		t.Fatal("Error.")
+	}
+
 }

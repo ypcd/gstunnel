@@ -57,6 +57,7 @@ func (ss *rawdataPiPePiPo) GetClientConn() net.Conn {
 }
 
 func (ss *rawdataPiPePiPo) GetServerConn() net.Conn {
-	checkError_panic(errors.New("RawdataPiPePiPo can not use GetServerConn()."))
+	checkError_panic(
+		errors.New("RawdataPiPePiPo can not use GetServerConn()"))
 	return nil
 }

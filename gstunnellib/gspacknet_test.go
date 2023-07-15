@@ -11,7 +11,7 @@ import (
 )
 
 func Test_gspacknet_pack_unpack(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
+	pn := NewGsPackNet(g_key_Default)
 	rawdata := []byte("123456")
 	encrydata := pn.Packing(rawdata)
 	decrydata, err := pn.Unpack(encrydata)
@@ -22,7 +22,7 @@ func Test_gspacknet_pack_unpack(t *testing.T) {
 }
 
 func Test_gspacknet_pack_unpack_m(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
+	pn := NewGsPackNet(g_key_Default)
 
 	for i := 0; i < 10; i++ {
 		rawdata := gsrand.GetRDBytes(50 * 1024)
@@ -37,7 +37,7 @@ func Test_gspacknet_pack_unpack_m(t *testing.T) {
 
 // 1
 func Test_gspacknet_WriteEncryData_GetDecryData1(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
+	pn := NewGsPackNet(g_key_Default)
 	rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(30 * 1024)))
 	encrydata := pn.Packing(rawdata)
 
@@ -54,13 +54,13 @@ func Test_gspacknet_WriteEncryData_GetDecryData1(t *testing.T) {
 
 // <1
 func Test_gspacknet_WriteEncryData_GetDecryData1_2(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
+	pn := NewGsPackNet(g_key_Default)
 	rawdata := gsrand.GetRDBytes(int(100 + gsrand.GetRDCInt_max(30*1024)))
 	encrydata := pn.Packing(rawdata)
 
 	pn.WriteEncryData(encrydata[:100])
 	data, err := pn.GetDecryData()
-	checkError_panic(err)
+	CheckError_panic(err)
 	if data != nil {
 		log.Fatal("Error.")
 	}
@@ -74,7 +74,7 @@ func Test_gspacknet_WriteEncryData_GetDecryData1_2(t *testing.T) {
 
 // >1
 func Test_gspacknet_WriteEncryData_GetDecryData1_3(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
+	pn := NewGsPackNet(g_key_Default)
 	rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(30 * 1024)))
 	encrydata := pn.Packing(rawdata)
 	rawdata2 := gsrand.GetRDBytes(int(1000 + gsrand.GetRDCInt_max(30*1024)))
@@ -83,7 +83,7 @@ func Test_gspacknet_WriteEncryData_GetDecryData1_3(t *testing.T) {
 	pn.WriteEncryData(encrydata)
 	pn.WriteEncryData(encrydata2[:1000])
 	data, err := pn.GetDecryData()
-	checkError_panic(err)
+	CheckError_panic(err)
 	if !bytes.Equal(rawdata, data) {
 		t.Fatal("error.")
 	}
@@ -97,7 +97,7 @@ func Test_gspacknet_WriteEncryData_GetDecryData1_3(t *testing.T) {
 
 // ==2
 func Test_gspacknet_WriteEncryData_GetDecryData1_4(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
+	pn := NewGsPackNet(g_key_Default)
 	rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(30 * 1024)))
 	encrydata := pn.Packing(rawdata)
 	rawdata2 := gsrand.GetRDBytes(int(1000 + gsrand.GetRDCInt_max(30*1024)))
@@ -106,7 +106,7 @@ func Test_gspacknet_WriteEncryData_GetDecryData1_4(t *testing.T) {
 	pn.WriteEncryData(encrydata)
 	pn.WriteEncryData(encrydata2)
 	data, err := pn.GetDecryData()
-	checkError_panic(err)
+	CheckError_panic(err)
 	rawdataList := append(rawdata, rawdata2...)
 	if !bytes.Equal(rawdataList, data) {
 		t.Fatal("error.")
@@ -115,7 +115,7 @@ func Test_gspacknet_WriteEncryData_GetDecryData1_4(t *testing.T) {
 
 // ==1000
 func Test_gspacknet_WriteEncryData_GetDecryData1_5(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
+	pn := NewGsPackNet(g_key_Default)
 
 	rawdataList := []byte{}
 	for i := 0; i < 1000; i++ {
@@ -126,41 +126,51 @@ func Test_gspacknet_WriteEncryData_GetDecryData1_5(t *testing.T) {
 	}
 
 	data, err := pn.GetDecryData()
-	checkError_panic(err)
+	CheckError_panic(err)
 	if !bytes.Equal(rawdataList, data) {
 		t.Fatal("error.")
 	}
 }
 
 func Test_gspacknet_gspack(t *testing.T) {
-	gspack := NewGsPack(key_defult)
-	gspacknet := NewGsPackNet(key_defult)
+	gspack := NewGsPack(g_key_Default)
+	gspacknet := NewGsPackNet(g_key_Default)
 
 	rawdata := []byte("123456")
 	encrydata := gspacknet.Packing(rawdata)
 	decrydata, err := gspack.Unpack(encrydata)
 	CheckError_test(err, t)
-	_ = decrydata
+	if !bytes.Equal(rawdata, decrydata) {
+		t.Fatal("Error.")
+	}
 }
 
-func noTest_gspacknet_WriteEncryData_GetDecryData2(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
-	rawdata := []byte("123456")
-	rawdata = append(rawdata, 0)
-
-	pn.WriteEncryData(rawdata)
-	gpn, _ := pn.(*gsPackNetImp)
-	_, _ = gpn.GetDecryData_old()
-
-}
-
-func Test_gspacknet_WriteEncryData_GetDecryData3(t *testing.T) {
-	pn := NewGsPackNet(key_defult)
+func Test_gspacknet_to_gspacknetimp(t *testing.T) {
+	pn := NewGsPackNet(g_key_Default)
 	rawdata := []byte("123456")
 	//rawdata = append(rawdata, 0)
 
 	pn.WriteEncryData(rawdata)
-	gpn, _ := pn.(*gsPackNetImp)
-	_, _ = gpn.GetDecryData()
+	gpn, ok := pn.(*gsPackNetImp)
+	if !ok {
+		t.Fatal("Error.")
+	}
+	data, err := gpn.GetDecryData()
+	CheckError_test(err, t)
+	_ = data
+}
 
+func Test_gspacknet_GetDecryData_data_len0(t *testing.T) {
+	pn := NewGsPackNet(g_key_Default)
+	rawdata := []byte{}
+	//rawdata = append(rawdata, 0)
+
+	pn.WriteEncryData(rawdata)
+	gpn, ok := pn.(*gsPackNetImp)
+	if !ok {
+		t.Fatal("Error.")
+	}
+	data, err := gpn.GetDecryData()
+	CheckError_test(err, t)
+	_ = data
 }

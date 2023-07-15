@@ -53,7 +53,7 @@ type runtime_statistics_data struct {
 	NumGC        uint32
 }
 
-func cp_atomic_netdata(src *net_data) net_data {
+func copy_atomic_netdata(src *net_data) net_data {
 	return net_data{
 		NetData:      atomic.LoadUint64(&src.NetData),
 		NetData_recv: atomic.LoadUint64(&src.NetData_recv),
@@ -61,22 +61,22 @@ func cp_atomic_netdata(src *net_data) net_data {
 	}
 }
 
-func cp_atomic_rsd(insrc *runtime_statistics_data) runtime_statistics_data {
+func deepcopy_atomic_rsd(insrc *runtime_statistics_data) runtime_statistics_data {
 	inGoroutines := int64(insrc.Goroutines)
 
 	return runtime_statistics_data{
 		Goroutines:   int(atomic.LoadInt64(&inGoroutines)),
 		TotalNetData: atomic.LoadUint64(&insrc.TotalNetData),
 
-		Src:    cp_atomic_netdata(&insrc.Src),
-		Server: cp_atomic_netdata(&insrc.Server),
+		Src:    copy_atomic_netdata(&insrc.Src),
+		Server: copy_atomic_netdata(&insrc.Server),
 	}
 }
 
 type runtime_statistics_imp struct {
-	lock sync.Mutex
-
 	runtime_statistics_data
+
+	lock sync.Mutex
 }
 
 func NewRuntimeStatistics() Runtime_statistics {
@@ -134,7 +134,7 @@ func (rs *runtime_statistics_imp) GetJson() ([]byte, error) {
 	//data1 := rs.runtime_statistics_data
 	//json.Marshal(data1)
 
-	data := cp_atomic_rsd(&rs.runtime_statistics_data)
+	data := deepcopy_atomic_rsd(&rs.runtime_statistics_data)
 	/*
 		p1 := &rs.runtime_statistics_data
 		p2 := &data
@@ -157,7 +157,7 @@ func RunGRuntimeStatistics_print(inlog *log.Logger, inruntstats Runtime_statisti
 		}
 		runtstats_data, ok := inruntstats.(*runtime_statistics_imp)
 		if !ok {
-			CheckErrorEx(errors.New("Error."), inlog)
+			CheckErrorEx(errors.New("error"), inlog)
 		}
 
 		inlog.Println("memstats.PauseTotalNs:", runtstats_data.PauseTotalNs, "us",

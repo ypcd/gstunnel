@@ -1,15 +1,24 @@
 package gsbase
 
 import (
-	"bytes"
+	"fmt"
+	"runtime/debug"
 	"testing"
 )
 
-func Test_base1(t *testing.T) {
-	buf := bytes.Buffer{}
+func Test_race1(t *testing.T) {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		t.Fatal("Error.")
+	}
+	for _, s := range info.Settings {
+		if s.Key == "-race" {
+			fmt.Printf("debug.ReadBuildInfo() --race=%s\n", s.Value)
+			fmt.Println("race state:", GetRaceState())
+			return
+		}
+	}
+	fmt.Println("debug.ReadBuildInfo() -race=false")
+	fmt.Println("race state:", GetRaceState())
 
-	buf.Write([]byte("abc123"))
-	buf.Reset()
-
-	//buf.Read()
 }

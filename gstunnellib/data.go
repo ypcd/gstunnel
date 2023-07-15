@@ -12,38 +12,35 @@ import (
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gsbase"
 )
 
-const Version string = gsbase.Version
+const G_Version string = gsbase.G_Version
 
 var p func(...interface{}) (int, error)
 
-var begin_Dinfo int = 0
+//var begin_Dinfo int = 0
 
-var debug_tag bool
+var g_commonIV = []byte{171, 158, 1, 73, 31, 98, 64, 85, 209, 217, 131, 150, 104, 219, 33, 220}
 
-var commonIV = []byte{171, 158, 1, 73, 31, 98, 64, 85, 209, 217, 131, 150, 104, 219, 33, 220}
+var g_logger *log.Logger
 
-var logger *log.Logger
+const G_Info_protobuf bool = true
 
-const Info_protobuf bool = true
+const G_Deep_debug = gsbase.G_Deep_debug
+const G_RunTime_Debug = gsbase.G_RunTime_Debug
 
-const Deep_debug = gsbase.Deep_debug
-const RunTime_Debug = gsbase.RunTime_Debug
+var G_RunTimeDebugInfo1 RunTimeDebugInfo
 
-var RunTimeDebugInfo1 RunTimeDebugInfo
-
-var key_defult string = "12345678901234567890123456789012"
+var g_key_Default string = gsbase.G_AesKeyDefault
 
 func Nullprint(v ...interface{}) (int, error)                       { return 1, nil }
 func Nullprintf(format string, a ...interface{}) (n int, err error) { return 1, nil }
 
 func init() {
-	debug_tag = false
 	p = Nullprint
 
-	logger = NewLoggerFileAndStdOut("gstunnellib.log")
+	g_logger = NewLoggerFileAndStdOut("gstunnellib.log")
 	//debug_tag = true
 	//p = fmt.Println
-	if RunTime_Debug {
-		RunTimeDebugInfo1 = NewRunTimeDebugInfo()
+	if G_RunTime_Debug {
+		G_RunTimeDebugInfo1 = NewRunTimeDebugInfo()
 	}
 }

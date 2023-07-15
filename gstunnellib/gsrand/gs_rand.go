@@ -3,6 +3,7 @@ package gsrand
 import (
 	"bytes"
 	randc "crypto/rand"
+	"encoding/base64"
 	"encoding/binary"
 	"math"
 	"math/big"
@@ -112,12 +113,23 @@ func GetrandString(Len int) string {
 }
 
 func GetrandStringPlus(Len int) string {
-	var strpool = []byte(
-		"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`~!@#$%^&*()-_=+[{]}|;:',<.>/?",
-	)
+	var strpool = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`~!@#$%^&*()-_=+[{]}|;:',<.>/?")
 	v1 := make([]byte, Len)
 	for i := 0; i < Len; i++ {
 		v1[i] = strpool[GetRDCInt_max(int64(len(strpool)))]
 	}
 	return string(v1)
+}
+
+func GetrandBytesArray(Len int) [3][]byte {
+	rdlist := [3][]byte{}
+	for i := 0; i < 3; i++ {
+		rdlist[i] = []byte(GetrandStringPlus(Len))
+	}
+
+	return rdlist
+}
+
+func GetRDKeyBase64(len int) string {
+	return base64.StdEncoding.EncodeToString(GetRDBytes(len))
 }

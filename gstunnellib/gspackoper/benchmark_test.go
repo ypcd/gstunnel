@@ -82,6 +82,7 @@ func Benchmark_GetSha256(b *testing.B) {
 	}
 }
 
+/*
 func Benchmark_json_po1(b *testing.B) {
 	ap1 := NewCompresser()
 	blen := 0
@@ -166,3 +167,4 @@ func Benchmark_json_un_proto_inbytes(b *testing.B) {
 	}
 	//b.Log(blen)
 }
+*/

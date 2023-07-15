@@ -9,7 +9,7 @@ func Test_GsConfig(t *testing.T) {
 	t.Log(gs)
 }
 
-func Test_GsConfig_getserver(t *testing.T) {
+func Test_GsConfig_getservers(t *testing.T) {
 	gs := CreateGsconfig("config3.test.json")
 	t.Log(gs)
 	re := gs.GetServers()

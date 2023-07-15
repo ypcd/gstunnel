@@ -17,6 +17,8 @@ type GsPackNet interface {
 
 	ChangeCryKey() []byte
 	IsTheVersionConsistent() []byte
+
+	GetGSPackSize(data []byte) uint16
 }
 
 type gsPackNetImp struct {
@@ -30,34 +32,17 @@ func NewGsPackNet(key string) GsPackNet {
 
 func (pn *gsPackNetImp) WriteEncryData(data []byte) error {
 	if len(data) <= 0 {
-		return errors.New("len(data) <= 0.")
+		return errors.New("len(data) <= 0")
 	}
 	pn.buf = append(pn.buf, data...)
 	return nil
 }
-func (pn *gsPackNetImp) GetDecryData_old() ([]byte, error) {
-
-	var rebuf []byte
-	for {
-		rn, fdbl := Find0(pn.buf)
-		var wbuf []byte
-		if fdbl {
-			wbuf = pn.buf[:rn]
-			pn.buf = pn.buf[rn+1:]
-
-			wbuf, err := pn.apack.Unpack(wbuf)
-			checkError_panic(err)
-			if len(wbuf) > 0 {
-				rebuf = append(rebuf, wbuf...)
-			}
-		} else {
-			return rebuf, nil
-		}
-	}
-}
 
 func (pn *gsPackNetImp) GetDecryData() ([]byte, error) {
 
+	if len(pn.buf) < 2 {
+		return nil, nil
+	}
 	var rebuf []byte
 	var wbuf []byte
 	for {
@@ -74,7 +59,7 @@ func (pn *gsPackNetImp) GetDecryData() ([]byte, error) {
 			pn.buf = pn.buf[2+rn:]
 		}
 		wbuf, err := pn.apack.Unpack(wbuf)
-		checkError_panic(err)
+		CheckError_panic(err)
 		if len(wbuf) > 0 {
 			rebuf = append(rebuf, wbuf...)
 		}
@@ -98,7 +83,10 @@ func (pn *gsPackNetImp) IsTheVersionConsistent() []byte {
 	return pn.apack.IsTheVersionConsistent()
 }
 
+func (pn *gsPackNetImp) GetGSPackSize(data []byte) uint16 {
+	return GetGSPackSize(data)
+}
+
 func GetGSPackSize(data []byte) uint16 {
-	sz := binary.BigEndian.Uint16(data)
-	return sz
+	return binary.BigEndian.Uint16(data)
 }

@@ -7,11 +7,11 @@ import (
 )
 
 type pool_map struct {
-	data       map[int64][]byte
-	data_mutex sync.Mutex
-	bytesSize  int
-	gid        int64
-	maxsize    int
+	data      map[int64][]byte
+	data_lock sync.Mutex
+	bytesSize int
+	gid       int64
+	maxsize   int
 
 	count_newBytes      int
 	count_put_not_add   int
@@ -37,8 +37,8 @@ func (pl *pool_map) getNewId() int64 {
 	return atomic.AddInt64(&pl.gid, 1)
 }
 func (pl *pool_map) Get() []byte {
-	pl.data_mutex.Lock()
-	defer pl.data_mutex.Unlock()
+	pl.data_lock.Lock()
+	defer pl.data_lock.Unlock()
 	pl.count_get++
 
 	if len(pl.data) == 0 {
@@ -55,8 +55,8 @@ func (pl *pool_map) Get() []byte {
 	return value
 }
 func (pl *pool_map) Put(indata []byte) {
-	pl.data_mutex.Lock()
-	defer pl.data_mutex.Unlock()
+	pl.data_lock.Lock()
+	defer pl.data_lock.Unlock()
 	if len(pl.data) < pl.maxsize {
 		pl.data[pl.getNewId()] = indata
 		return
@@ -71,7 +71,6 @@ func (pl *pool_map) Size() int {
 func (pl *pool_map) print() {
 	fmt.Printf("%+v\n", pl)
 }
-
 func (pl *pool_map) ClearAll() {
 	pl.data = make(map[int64][]byte, 0)
 }

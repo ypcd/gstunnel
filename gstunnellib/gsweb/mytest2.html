@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>mytest</title>
+<!-- 这是一段注释 -->
+
+<style type="text/css">
+	p {color:rgb(58, 58, 168);}
+	body{color:rgb(202, 44, 44)}
+</style>
+</head>
+<body>
+
+<h2>为 JSON 字符串创建对象</h2>
+<p id="demo"></p>
+<p id="demo2"></p>
+
+<script>
+
+var json1 = ""
+
+var url = "http://127.0.0.1:8080/json"
+
+	fetch(url).then(function(response) {
+	return response.json();
+	}).then(function(data) {
+	var obj2 = data
+	console.log(data);
+
+	gsstatus = "Gid: "+obj2.Gid+"<br><br>"
+
+	for(var m in obj2.ConnList.Data){
+		if (m!="Gid"){
+			gsstatus+=m+": "+obj2.ConnList.Data[m]+"<br>"
+		}
+	}
+
+	document.getElementById("demo2").innerHTML = gsstatus
+
+	}).catch(function(err) {
+	console.log('Fetch Error :-S', err);
+	});
+
+
+</script>
+
+</body>
+</html>

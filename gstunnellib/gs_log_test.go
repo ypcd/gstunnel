@@ -9,13 +9,15 @@ import (
 	"time"
 )
 
+var gslogtest_outFileName string
+
 func Test_gs_log(t *testing.T) {
 	outf, err := os.Create("tmp.log")
 	CheckError_test(err, t)
 
 	lws := io.MultiWriter(outf, os.Stdout)
-	logger := log.New(lws, "", log.LstdFlags|log.Lshortfile)
-	logger.Println("test.")
+	g_logger := log.New(lws, "", log.LstdFlags|log.Lshortfile)
+	g_logger.Println("test.")
 	inf, err := os.Open("tmp.log")
 	CheckError_test(err, t)
 	defer func() {
@@ -34,12 +36,12 @@ func Test_gs_log(t *testing.T) {
 }
 
 func Test_NewFileLogger(t *testing.T) {
-	var outFileName string
-	lg := NewLoggerFileAndStdOutEx("tmp.log", &outFileName)
+	var outFileName *string = &gslogtest_outFileName
+	lg := newLoggerFileAndStdOutEx("tmp.log", outFileName)
 	lg.Println("Log test.")
 	time.Sleep(time.Second)
 
-	inf, err := os.Open(outFileName)
+	inf, err := os.Open(*outFileName)
 	CheckError_test(err, t)
 	defer func() {
 		inf.Close()
@@ -53,6 +55,12 @@ func Test_NewFileLogger(t *testing.T) {
 	}
 }
 
+/*
+	func Test_NewFileLogger_remove(t *testing.T) {
+		err := os.Remove(gslogtest_outFileName)
+		CheckError_test(err, t)
+	}
+*/
 func Test_FileNameAddTime1(t *testing.T) {
 	str1 := GetFileNameAddTime("123")
 	_ = str1

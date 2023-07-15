@@ -3,34 +3,65 @@ package gstunnellib
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"fmt"
+
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gsbase"
 )
 
-type gsaes struct {
+type aesItem struct {
 	cpr cipher.Block
 	gcm cipher.AEAD
 }
 
-func createAes(key []byte) gsaes {
-	var v1 gsaes
+func createAesItem(key []byte) *aesItem {
+	var v1 aesItem
 	var err error
 
 	v1.cpr, err = aes.NewCipher(key)
-	checkError_panic(err)
+	CheckError_panic(err)
 
-	v1.gcm, err = cipher.NewGCMWithNonceSize(v1.cpr, len(commonIV))
-	checkError_panic(err)
+	v1.gcm, err = cipher.NewGCMWithNonceSize(v1.cpr, len(g_commonIV))
+	CheckError_panic(err)
 
-	//v2 := v1.gcm.NonceSize()
-	//_ = v2
+	return &v1
+}
+
+func (a *aesItem) encrypter(data []byte) []byte {
+	return a.gcm.Seal(nil, g_commonIV, data, nil)
+}
+
+func (a *aesItem) decrypter(data []byte) []byte {
+	decry, err := a.gcm.Open(nil, g_commonIV, data, nil)
+	CheckError_panic(err)
+	return decry
+}
+
+type gsaes struct {
+	aes *aesItem
+}
+
+func createAes(key []byte) gsaes {
+	if len(key) != gsbase.G_AesKeyLen {
+		CheckError_exit(
+			fmt.Errorf("error: the key is not %d bytes", gsbase.G_AesKeyLen))
+	}
+
+	var v1 gsaes
+
+	v1.aes = createAesItem(key)
+
 	return v1
 }
 
 func (a *gsaes) encrypter(data []byte) []byte {
-	return a.gcm.Seal(nil, commonIV, data, nil)
+
+	data = a.aes.encrypter(data)
+
+	return data
 }
 
 func (a *gsaes) decrypter(data []byte) []byte {
-	decry, err := a.gcm.Open(nil, commonIV, data, nil)
-	checkError_panic(err)
-	return decry
+	data = a.aes.decrypter(data)
+
+	return data
 }

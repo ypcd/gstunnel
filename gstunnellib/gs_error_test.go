@@ -12,30 +12,30 @@ func Test_CheckError_test(t *testing.T) {
 }
 
 func Test_CheckError(t *testing.T) {
-	checkError(nil)
-	//checkError(errors.New("123"))
+	CheckError(nil)
+	//CheckError(errors.New("123"))
 }
 
 func Test_CheckError2(t *testing.T) {
-	checkError(errors.New("Error test."))
-	//checkError(errors.New("123"))
+	CheckError(errors.New("---error test, not error---Error test."))
+	//CheckError(errors.New("123"))
 }
 
 func Test_CheckError_exit(t *testing.T) {
-	//checkError_exit(errors.New("Error test."))
-	//checkError(errors.New("123"))
+	//CheckError_exit(errors.New("Error test."))
+	//CheckError(errors.New("123"))
 }
 
 func Test_Panic_Recover(t *testing.T) {
 	defer Panic_Recover(log.Default())
-	panic("An exception occurred.")
+	panic("---error test, not error---An exception occurred.")
 }
 
 func Test_CheckError_info(t *testing.T) {
-	checkError_info(errors.New("Hello."))
-	//checkError(errors.New("123"))
+	CheckError_info(errors.New("Hello."))
+	//CheckError(errors.New("123"))
 }
 
 func noTest_panic(t *testing.T) {
-	checkError_panic(errors.New("error."))
+	CheckError_panic(errors.New("error."))
 }

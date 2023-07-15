@@ -18,7 +18,7 @@ func Test_gid1(t *testing.T) {
 			defer wg.Done()
 			list1 := []uint64{}
 			for i := 0; i < 1000; i++ {
-				list1 = append(list1, gid.GetId())
+				list1 = append(list1, gid.GenerateId())
 			}
 			chan1 <- list1
 		}()
@@ -48,7 +48,7 @@ func Test_gid2(t *testing.T) {
 			defer wg.Done()
 			list1 := []uint64{}
 			for i := uint64(0); i < idn; i++ {
-				list1 = append(list1, gid.GetId())
+				list1 = append(list1, gid.GenerateId())
 			}
 			chan1 <- list1
 		}()
@@ -78,4 +78,20 @@ func Test_gid2(t *testing.T) {
 		}
 	}
 
+}
+
+func Test_GetgId1(t *testing.T) {
+	gid1 := NewGIdImp()
+	if gid1.GetId() != 0 {
+		panic("Error.")
+	}
+	list1 := []uint64{}
+	for i := uint64(0); i < 1000*1000; i++ {
+		id1 := gid1.GenerateId()
+		if gid1.GetId() != id1 {
+			panic("Error.")
+		}
+		list1 = append(list1, gid1.GetId())
+	}
+	_ = list1
 }

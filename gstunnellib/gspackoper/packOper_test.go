@@ -12,11 +12,10 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ypcd/gstunnel/v6/timerm"
 	"google.golang.org/protobuf/proto"
 
 	//. "gstunnellib"
-	"math/rand"
+
 	"strings"
 	"testing"
 	"unsafe"
@@ -42,23 +41,25 @@ func Test_JPackandun(t *testing.T) {
 		t.Error()
 	}
 }
-func Test_PackRand(t *testing.T) {
-	d1 := []byte("123Abc")
-	p1 := PackRand{Pack{d1}, rand.Int63()}
-	j1, _ := json.Marshal(p1)
 
-	p2 := PackRand{}
-	json.Unmarshal(j1, &p2)
-	d2 := p2.Data
-	if string(d1) == string(d2) {
-		t.Log("d1 == d2, ok.")
-	}
-	if p1.Rand == p2.Rand {
-		t.Log("p1.Rand == p2.Rand, ok.")
-	}
-	t.Log(d2)
-}
+/*
+	func Test_PackRand(t *testing.T) {
+		d1 := []byte("123Abc")
+		p1 := PackRand{Pack{d1}, rand.Int63()}
+		j1, _ := json.Marshal(p1)
 
+		p2 := PackRand{}
+		json.Unmarshal(j1, &p2)
+		d2 := p2.Data
+		if string(d1) == string(d2) {
+			t.Log("d1 == d2, ok.")
+		}
+		if p1.Rand == p2.Rand {
+			t.Log("p1.Rand == p2.Rand, ok.")
+		}
+		t.Log(d2)
+	}
+*/
 func Test_GetSha256Hex(t *testing.T) {
 	data := []byte{}
 
@@ -173,51 +174,14 @@ func Test_po_size(t *testing.T) {
 
 	_ = re
 
-	pd2 := createPackOperGen_po1([]byte{})
+	//	pd2 := createPackOperGen_po1([]byte{})
 
-	re2, _ := json.Marshal(pd2)
+	//	re2, _ := json.Marshal(pd2)
 
 	t.Log(string(re), len(re))
-	t.Log(string(re2), len(re2))
+	//	t.Log(string(re2), len(re2))
 	t.Log("po size:", unsafe.Sizeof(po2))
-	t.Log("po size:", unsafe.Sizeof(po2))
-
-}
-
-func Test_compress_un(t *testing.T) {
-	ap1 := NewCompresser()
-	data1 := GetRDCBytes(1024 * 6)
-
-	const data2 = `<?xml version="1.0"?>
-<book>
-	<meta name="title" content="The Go Programming Language"/>
-	<meta name="authors" content="Alan Donovan and Brian Kernighan"/>
-	<meta name="published" content="2015-10-26"/>
-	<meta name="isbn" content="978-0134190440"/>
-	<data>...</data>
-</book>
-`
-
-	pd := createPackOperGen([]byte(data1))
-
-	re, _ := json.Marshal(pd)
-
-	_ = re
-
-	data := []byte(re)
-
-	rt := timerm.CreateRecoTime()
-	t.Log(rt.Run())
-	cdata := ap1.compress(data)
-	t.Log(rt.Run())
-	t.Log("compress:", float32(len(cdata))/float32(len(data)))
-
-	undata := ap1.uncompress(cdata)
-	if bytes.Equal(data, undata) {
-		t.Log("ok.")
-	} else {
-		t.Log("Error.")
-	}
+	//	t.Log("po size:", unsafe.Sizeof(po2))
 
 }
 
@@ -246,20 +210,21 @@ func Test_po_is(t *testing.T) {
 
 }
 
-func Test_po1(t *testing.T) {
-	data := []byte("123 ABcd test.")
+/*
+	func Test_po1(t *testing.T) {
+		data := []byte("123 ABcd test.")
 
-	po := createPackOperGen_po1(nil)
-	if po.IsOk() != nil {
-		t.Fatal()
+		po := createPackOperGen_po1(nil)
+		if po.IsOk() != nil {
+			t.Fatal()
+		}
+		pdata := jsonPacking_OperGen_po1(data)
+		undata, _ := jsonUnpack_po1(pdata)
+		if !bytes.Equal(data, undata) {
+			t.Fatal()
+		}
 	}
-	pdata := jsonPacking_OperGen_po1(data)
-	undata, _ := jsonUnpack_po1(pdata)
-	if !bytes.Equal(data, undata) {
-		t.Fatal()
-	}
-}
-
+*/
 func Test_json__(t *testing.T) {
 	pvdata := JsonPacking_OperVersion()
 	if !IsPOVersion(pvdata) {
@@ -300,25 +265,45 @@ func Test_GetEncryKey(t *testing.T) {
 }
 
 func Test_sha256_file(t *testing.T) {
-	fp1 := `C:\Users\user3\Downloads\gfx_win_101.3413_101.2111.exe`
-	//	fp2 := "C:\\Users\\user3\\Downloads\\WeChatSetup.exe"
+
+	fp1 := "./tmp.hash.txt"
+	f, err := os.Create(fp1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		err := os.Remove(fp1)
+		if err != nil {
+			t.Fatal(err.Error())
+		}
+	}()
+
+	f.Write([]byte("1234567890abcdefghijklmnopqrst"))
+	f.Close()
 
 	t1 := time.Now()
-	f, err := os.Open(fp1)
+	f, err = os.Open(fp1)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
+	defer f.Close()
 	s2 := sha256.New()
 	_, err = io.Copy(s2, f)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	t2 := time.Now().Sub(t1)
+	t2 := time.Since(t1)
 	fmt.Println("time milSec:", t2.Milliseconds())
 
+	hash1 := hex.EncodeToString(s2.Sum([]byte{}))
+	hash2 := "7e09b21b83692de4d3146479188d9b703e630f531bc795dccaabc659915ad56c"
+
 	fmt.Println(
-		hex.EncodeToString(s2.Sum([]byte{})),
+		hash1,
 	)
+	if !strings.EqualFold(hash1, hash2) {
+		t.Fatal("Error.")
+	}
 }
 
 // old len:  55  80

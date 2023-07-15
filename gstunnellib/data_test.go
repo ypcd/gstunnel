@@ -28,18 +28,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gsbase"
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 	. "github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
-
-var testi1 = 1
 
 var wlist sync.WaitGroup
 
 func init() {
 	p = Nullprint
 	//p = t.Log
-	debug_tag = true
 }
 
 func getrand() int {
@@ -53,8 +51,6 @@ func getsha1(data []byte) string {
 	h.Write(data)
 	return fmt.Sprintf("%X", h.Sum(nil))
 }
-
-var unpbuf []byte
 
 func Test_find0(t *testing.T) {
 	data := make([]byte, 0)
@@ -87,50 +83,11 @@ func mtF(frun ftype) {
 	wlist.Wait()
 }
 
-func Test_Aest(t *testing.T) {
-
-	fbuf := GetRDCBytes(1024 * 1024)
-
-	a1 := createAes([]byte(GetrandString(32)))
-
-	tmp := a1.encrypter(fbuf)
-	outbuf := a1.decrypter(tmp)
-
-	if getsha1(fbuf) == getsha1(outbuf) {
-		t.Log("ok.")
-		t.Log(getsha1(fbuf))
-	} else {
-		t.Error()
-	}
-
-}
-
-func aest() {
-
-	fbuf := GetRDCBytes(1024)
-
-	a1 := createAes([]byte(GetrandString(32)))
-	tmp := a1.encrypter(fbuf)
-	outbuf := a1.decrypter(tmp)
-
-	if getsha1(fbuf) == getsha1(outbuf) {
-		p("ok.", getrand())
-
-	} else {
-		log.Fatal("Error")
-	}
-	wlist.Done()
-}
-
-func Test_MtAest(t *testing.T) {
-	mtF(aest)
-}
-
 func Test_Aestpack(t *testing.T) {
 
 	fbuf := GetRDCBytes(50000)
 
-	a1 := NewGsPack(GetrandString(32))
+	a1 := NewGsPack(GetrandString(gsbase.G_AesKeyLen))
 
 	tmp := a1.Packing(fbuf)
 	t.Log(tmp[len(tmp)-3:])
@@ -149,7 +106,7 @@ func Test_Aestpack2(t *testing.T) {
 
 	fbuf := []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`~!@#$%^&*()-_=+[{]}|;:',<.>/?")
 
-	a1 := NewGsPack(GetrandString(32))
+	a1 := NewGsPack(GetrandString(gsbase.G_AesKeyLen))
 
 	tmp := a1.Packing(fbuf)
 	t.Log(tmp[len(tmp)-3:])
@@ -164,12 +121,42 @@ func Test_Aestpack2(t *testing.T) {
 	}
 
 }
+func Test_Aestpack_ChangeCryKey(t *testing.T) {
+	key1 := gsrand.GetrandString(gsbase.G_AesKeyLen)
+	rawdata := gsrand.GetRDBytes(1024)
+
+	a1 := newAesPack(key1)
+	a2 := newAesPack(key1)
+
+	if !bytes.Equal(a1.a.encrypter(rawdata), a2.a.encrypter(rawdata)) {
+		panic("error.")
+	}
+	tmp := a1.ChangeCryKey()
+	t.Log(tmp[len(tmp)-3:])
+	_, _ = a2.Unpack(tmp)
+
+	if !bytes.Equal(a1.a.encrypter(rawdata), a2.a.encrypter(rawdata)) {
+		panic("error.")
+	}
+}
+
+func Test_Aestpack_IsTheVersionConsistent(t *testing.T) {
+	key1 := GetrandString(gsbase.G_AesKeyLen)
+
+	a1 := newAesPack(key1)
+	a2 := newAesPack(key1)
+
+	tmp := a1.IsTheVersionConsistent()
+	t.Log(tmp[len(tmp)-3:])
+	_, _ = a2.Unpack(tmp)
+
+}
 
 func aestpack() {
 
 	fbuf := GetRDCBytes(50 * 1024)
 
-	a1 := NewGsPack(GetrandString(32))
+	a1 := NewGsPack(GetrandString(gsbase.G_AesKeyLen))
 	tmp := a1.Packing(fbuf)
 	outbuf, _ := a1.Unpack(tmp)
 
@@ -195,25 +182,27 @@ func Test_binConv(t *testing.T) {
 	t.Log(&buf, buf)
 }
 
-func Test_Aespack_changeCryKey(t *testing.T) {
-	key := GetRDBytes(32)
-	ap1 := newAesPack(string(key))
-	cp1 := ap1.a
-	key2 := GetRDBytes(32)
-	ap1.setKey(key2)
-	cp2 := ap1.a
+/*
+	func Test_Aespack_changeCryKey(t *testing.T) {
+		key := GetRDBytes(32)
+		ap1 := newAesPack(string(key))
+		cp1 := ap1.a
+		key2 := GetRDBytes(32)
+		ap1.setKey(key2)
+		cp2 := ap1.a
 
-	t.Log(key)
-	t.Log(key2)
-	t.Log(cp1, cp2)
-	if cp1 != cp2 {
-		t.Log("Ok.")
-	} else {
-		t.Error("Error.")
+		t.Log(key)
+		t.Log(key2)
+		t.Log(cp1, cp2)
+		if cp1 != cp2 {
+			t.Log("Ok.")
+		} else {
+			t.Error("Error.")
+		}
+		_ = key
 	}
-	_ = key
-}
-
+*/
+/*
 func Test_Aespack_changeCryKey2(t *testing.T) {
 	key := GetRDBytes(32)
 	ap1 := newAesPack(string(key))
@@ -232,11 +221,12 @@ func Test_Aespack_changeCryKey2(t *testing.T) {
 	}
 	_ = key
 }
+*/
 
 func Test_AesEncryDecry(t *testing.T) {
 	d1 := GetRDBytes(15834)
-	key1 := GetRDBytes(32)
-	key2 := GetRDBytes(32)
+	key1 := GetRDBytes(gsbase.G_AesKeyLen)
+	key2 := GetRDBytes(gsbase.G_AesKeyLen)
 
 	ap1 := newAesPack(string(key1))
 	ap2 := newAesPack(string(key2))
@@ -362,7 +352,7 @@ func Test_GsPack(t *testing.T) {
 
 	fbuf := GetRDCBytes(50 * 1024)
 
-	a1 := NewGsPack("5Wl)hPO9~UF_IecIN$e#uW!xc%7Yo$iQ")
+	a1 := NewGsPack(gsrand.GetrandStringPlus(gsbase.G_AesKeyLen))
 
 	tmp := a1.Packing(fbuf)
 	t.Log(tmp[len(tmp)-3:])
@@ -384,8 +374,10 @@ func Test_nullFunc(t *testing.T) {
 
 func Test_poversion(t *testing.T) {
 	//d1 := GetRDBytes(15834)
-	key1 := GetRDBytes(32)
-	//key2 := GetRDBytes(32)
+	key1 := GetRDBytes(gsbase.G_AesKeyLen)
+
+	key2 := GetRDBytes(gsbase.G_AesKeyLen)
+	fmt.Println(key2)
 
 	ap1 := NewGsPack(string(key1))
 	//ap2 := NewGsPack(string(key2))
@@ -402,15 +394,15 @@ func Test_poversion(t *testing.T) {
 }
 
 func Test_pack_type_size(t *testing.T) {
-	ap1 := NewGsPack(GetrandString(32))
+	ap1 := NewGsPack(GetrandString(gsbase.G_AesKeyLen))
 	t.Log(len(ap1.Packing([]byte{})))
 	t.Log(len(ap1.ChangeCryKey()))
 	t.Log(len(ap1.IsTheVersionConsistent()))
 }
 
 func Test_gspack_pack_unpack_run_loop(t *testing.T) {
-	pn := NewGsPack("12345678901234567890123456789012")
-	rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(50 * 1024)))
+	pn := NewGsPack(gsbase.G_AesKeyDefault)
+	rawdata := GetRDBytes(int(GetRDCInt_max(50 * 1024)))
 	encrydata := pn.Packing(rawdata)
 
 	for i := 0; i < 10; i++ {
@@ -423,22 +415,22 @@ func Test_gspack_pack_unpack_run_loop(t *testing.T) {
 }
 
 func Test_gspacknet_pack_unpack_2(t *testing.T) {
-	pn := NewGsPack("12345678901234567890123456789012")
+	pn := NewGsPack(gsbase.G_AesKeyDefault)
 	rawdata := GetRDBytes(50 * 1024)
 	encrydata := pn.Packing(rawdata)
 
 	decrydata, err := pn.Unpack([]byte(encrydata))
-	checkError_panic(err)
+	CheckError_panic(err)
 	if !bytes.Equal(rawdata, decrydata) {
-		checkError_panic(errors.New("Rawdata != decrydata."))
+		CheckError_panic(errors.New("Rawdata != decrydata."))
 	}
 }
 
 func Test_gspack_pack_unpack_3(t *testing.T) {
-	pn := NewGsPack("12345678901234567890123456789012")
+	pn := NewGsPack(gsbase.G_AesKeyDefault)
 
 	for i := 0; i < 10; i++ {
-		rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(50 * 1024)))
+		rawdata := GetRDBytes(int(GetRDCInt_max(50 * 1024)))
 		encrydata := pn.Packing(rawdata)
 		decrydata, err := pn.Unpack(encrydata)
 		CheckError_test(err, t)
@@ -449,7 +441,7 @@ func Test_gspack_pack_unpack_3(t *testing.T) {
 }
 
 func Test_base64_bytes(t *testing.T) {
-	rawdata := gsrand.GetRDBytes(1024 * 1024)
+	rawdata := GetRDBytes(1024 * 1024)
 	//rawdata := []byte("123456abcdef")
 	endata := make([]byte, base64.StdEncoding.EncodedLen(len(rawdata)))
 	dedata := make([]byte, base64.StdEncoding.DecodedLen(len(endata)))
@@ -468,7 +460,7 @@ func Test_base64_bytes(t *testing.T) {
 }
 
 func Test_base64_bytes_add0(t *testing.T) {
-	rawdata := gsrand.GetRDBytes(1024)
+	rawdata := GetRDBytes(1024)
 	//rawdata := []byte("123456abcdef")
 	enlen := base64.StdEncoding.EncodedLen(len(rawdata)) + 1
 	endata := make([]byte, enlen)
@@ -485,5 +477,49 @@ func Test_base64_bytes_add0(t *testing.T) {
 
 	if !bytes.Equal(rawdata, dedata) {
 		t.Fatal("Error: rawdata != dedata.")
+	}
+}
+
+func Test_GetRDKeyString96(t *testing.T) {
+	key1 := GetRDKeyString96()
+
+	fbuf := GetRDCBytes(50 * 1024)
+
+	a1 := NewGsPack(key1)
+
+	tmp := a1.Packing(fbuf)
+	t.Log(tmp[len(tmp)-3:])
+	outbuf, _ := a1.Unpack(tmp)
+
+	if getsha1(fbuf) == getsha1(outbuf) {
+		t.Log("ok.")
+		t.Log(getsha1(fbuf))
+	} else {
+		t.Error()
+	}
+}
+
+func Test_GetRDKeyBase64(t *testing.T) {
+	key1str := GetRDKeyBase64(gsbase.G_AesKeyLen)
+
+	fbuf := GetRDCBytes(50 * 1024)
+
+	log.Println("key1str size:", len([]byte(key1str)))
+	key1, err := base64.StdEncoding.DecodeString(key1str)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	a1 := NewGsPack(string(key1))
+
+	tmp := a1.Packing(fbuf)
+	t.Log(tmp[len(tmp)-3:])
+	outbuf, _ := a1.Unpack(tmp)
+
+	if getsha1(fbuf) == getsha1(outbuf) {
+		t.Log("ok.")
+		t.Log(getsha1(fbuf))
+	} else {
+		t.Error()
 	}
 }

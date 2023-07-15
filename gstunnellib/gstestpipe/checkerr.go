@@ -7,18 +7,18 @@ import (
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
 )
 
-var logger *log.Logger
+var g_logger *log.Logger
 
 func init() {
-	logger = gstunnellib.NewLoggerFileAndStdOut("GsTestPiPe.log")
+	g_logger = gstunnellib.NewLoggerFileAndStdOut("GsTestPiPe.log")
 }
 
 func checkError(err error) {
-	gstunnellib.CheckErrorEx(err, logger)
+	gstunnellib.CheckErrorEx(err, g_logger)
 }
 
 func checkError_exit(err error) {
-	gstunnellib.CheckErrorEx_exit(err, logger)
+	gstunnellib.CheckErrorEx_exit(err, g_logger)
 }
 
 func checkError_panic(err error) {
@@ -34,5 +34,5 @@ func CheckError_test_noExit(err error, t *testing.T) {
 }
 
 func checkError_info(err error) {
-	gstunnellib.CheckErrorEx_info(err, logger)
+	gstunnellib.CheckErrorEx_info(err, g_logger)
 }

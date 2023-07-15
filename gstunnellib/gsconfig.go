@@ -1,22 +1,15 @@
 package gstunnellib
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gsbase"
 	. "github.com/ypcd/gstunnel/v6/gstunnellib/gsrand"
 )
-
-type gsConfig_1 struct {
-	Listen             string
-	Server             string
-	Key                string
-	Debug              bool
-	Tmr_display_time   int
-	Tmr_changekey_time int
-	Mt_model           bool
-}
 
 type GsConfig struct {
 	Listen  string
@@ -29,6 +22,7 @@ type GsConfig struct {
 
 	Debug    bool
 	Mt_model bool
+	WebUI    bool
 }
 
 func (gs *GsConfig) GetServer_rand() string {
@@ -40,11 +34,11 @@ func (gs *GsConfig) GetServers() []string {
 
 func CreateGsconfig(confg string) *GsConfig {
 	f, err := os.Open(confg)
-	checkError_exit(err)
+	CheckError_exit(err)
 	defer f.Close()
 
 	buf, err := io.ReadAll(f)
-	checkError(err)
+	CheckError_exit(err)
 
 	//fmt.Println(string(buf))
 	var gsconfig GsConfig
@@ -54,12 +48,21 @@ func CreateGsconfig(confg string) *GsConfig {
 	gsconfig.NetworkTimeout = 60
 	gsconfig.Debug = false
 	gsconfig.Mt_model = true
+	gsconfig.WebUI = false
 
 	err = json.Unmarshal(buf, &gsconfig)
-	checkError(err)
+	CheckError(err)
 
 	if gsconfig.Servers == nil || gsconfig.Key == "" || gsconfig.Listen == "" {
-		logger.Fatalln("Gstunnel config is error.")
+		g_logger.Fatalln("Gstunnel config is error.")
 	}
+
+	key1, err := base64.StdEncoding.DecodeString(gsconfig.Key)
+	CheckError_exit(err)
+	if len(key1) != gsbase.G_AesKeyLen {
+		CheckError_exit(fmt.Errorf("error: the key is not %d bytes", gsbase.G_AesKeyLen))
+	}
+	gsconfig.Key = string(key1)
+
 	return &gsconfig
 }
