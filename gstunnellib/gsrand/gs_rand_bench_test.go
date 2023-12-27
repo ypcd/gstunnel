@@ -13,7 +13,7 @@ Benchmark_randc_Reader_Read-4   	 7525699	       164.0 ns/op	      40 B/op	     
 Benchmark_randc_int-4           	  303093	      3679 ns/op	    1169 B/op	      65 allocs/op
 */
 
-// 新的GetRDCBytes函数的性能是GetRDCBytes_old函数的22.4倍
+// 新的GetRDCBytes函数的性能是getRDCBytes_old函数的22.4倍
 func Benchmark_randc_Reader_Read(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		rd := GetRDCBytes(16)
@@ -23,7 +23,7 @@ func Benchmark_randc_Reader_Read(b *testing.B) {
 
 func Benchmark_randc_int(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		rd := GetRDCBytes_old(16)
+		rd := getRDCBytes_old(16)
 		_ = rd
 	}
 }

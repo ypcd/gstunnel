@@ -16,7 +16,7 @@ type GstServerSocketEcho struct {
 }
 
 func NewGstServerSocketEcho_RandAddr() *GstServerSocketEcho {
-	return &GstServerSocketEcho{RawServerSocket: RawServerSocket{connList: make(chan net.Conn, 1024),
+	return &GstServerSocketEcho{RawServerSocket: RawServerSocket{connList: make(chan net.Conn, 10240),
 		serverAddr: GetRandAddr()},
 		key: g_key_Default}
 }

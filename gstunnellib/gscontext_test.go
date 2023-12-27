@@ -5,7 +5,7 @@ import (
 )
 
 func Test_gscontext1(t *testing.T) {
-	gc := NewGsContextImp(123, NewGsStatusImp(NewGIdImp()))
+	gc := NewGsContextImp(123, NewGsStatusImp())
 
 	if gc.GetGsId() != 123 {
 		panic("Error.")

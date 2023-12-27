@@ -7,7 +7,9 @@
 package gstunnellib
 
 import (
+	"fmt"
 	"log"
+	"net"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gsbase"
 )
@@ -43,4 +45,9 @@ func init() {
 	if G_RunTime_Debug {
 		G_RunTimeDebugInfo1 = NewRunTimeDebugInfo()
 	}
+}
+
+func GetNetConnAddrString(str string, conn net.Conn) string {
+	return fmt.Sprintf("%s: [localIp:%s  remoteIp:%s]\n",
+		str, conn.LocalAddr().String(), conn.RemoteAddr().String())
 }

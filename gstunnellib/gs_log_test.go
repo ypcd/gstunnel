@@ -55,6 +55,33 @@ func Test_NewFileLogger(t *testing.T) {
 	}
 }
 
+func _Test_NewFileLogger_nil_g_logger(t *testing.T) {
+	logger2 := g_logger
+	g_logger = nil
+	defer func() {
+		g_logger = logger2
+	}()
+
+	var outFileName *string = &gslogtest_outFileName
+
+	lg := NewLoggerFileAndStdOut(":")
+	lg.Println("Log test.")
+	time.Sleep(time.Second)
+
+	inf, err := os.Open(*outFileName)
+	CheckError_test(err, t)
+	defer func() {
+		inf.Close()
+	}()
+
+	re, err := io.ReadAll(inf)
+	CheckError_test(err, t)
+
+	if !strings.Contains(string(re), "Log test.") {
+		t.Fatal(err)
+	}
+}
+
 /*
 	func Test_NewFileLogger_remove(t *testing.T) {
 		err := os.Remove(gslogtest_outFileName)

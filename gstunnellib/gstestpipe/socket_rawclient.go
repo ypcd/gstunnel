@@ -52,13 +52,17 @@ func NewRawClientSocketEcho(serverAddr string) *RawClientSocketEcho {
 
 func (ss *RawClientSocketEcho) createEchoHandler(client net.Conn) {
 	go func() {
-		for {
-			_, err := io.Copy(client, client)
-			if errors.Is(err, net.ErrClosed) {
-				return
-			}
-			checkError_exit(err)
+
+		_, err := io.Copy(client, client)
+		if errors.Is(err, net.ErrClosed) {
+			checkError_info(err)
+			return
 		}
+		if err != nil {
+			checkError(err)
+			return
+		}
+
 	}()
 }
 

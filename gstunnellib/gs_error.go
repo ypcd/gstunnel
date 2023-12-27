@@ -8,10 +8,12 @@ import (
 	"testing"
 )
 
+var g_gsErrorStackBufSize int = 2 * 1024 * 1024
+
 // Print error info, print stack info.
 func CheckErrorEx(err error, inlogger *log.Logger) {
 	if err != nil {
-		tmp := make([]byte, 1024*1024)
+		tmp := make([]byte, g_gsErrorStackBufSize)
 		nlen := runtime.Stack(tmp, false)
 		inlogger.Output(3, fmt.Sprintf("Error: %s\nstack: %s\n", err.Error(), string(tmp[:nlen])))
 	}
@@ -25,9 +27,14 @@ func CheckErrorEx_panic(err error) {
 
 func CheckErrorEx_exit(err error, inlogger *log.Logger) {
 	if err != nil {
-		tmp := make([]byte, 1024*1024)
-		nlen := runtime.Stack(tmp, false)
-		inlogger.Output(3, fmt.Sprintf("Fatal error: %s\nstack: %s\n", err.Error(), string(tmp[:nlen])))
+		if inlogger != nil {
+			tmp := make([]byte, g_gsErrorStackBufSize)
+			nlen := runtime.Stack(tmp, false)
+			inlogger.Output(3, fmt.Sprintf("Fatal error: %s\nstack: %s\n", err.Error(), string(tmp[:nlen])))
+		} else {
+			fmt.Println("Fatal error:", err.Error())
+			panic(err)
+		}
 		os.Exit(-1)
 	}
 }
@@ -54,7 +61,7 @@ func CheckError_panic(err error) {
 	CheckErrorEx_panic(err)
 }
 
-func CheckError_test(inerr error, t *testing.T) {
+func CheckError_test_old(inerr error, t *testing.T) {
 	if inerr != nil {
 		_, file, line, ok := runtime.Caller(1)
 		if !ok {
@@ -70,7 +77,7 @@ func CheckError_test(inerr error, t *testing.T) {
 	}
 }
 
-func CheckError_test_noExit(inerr error, t *testing.T) {
+func CheckError_test_noExit_old(inerr error, t *testing.T) {
 	if inerr != nil {
 		_, file, line, ok := runtime.Caller(1)
 		if !ok {
@@ -85,10 +92,13 @@ func CheckError_test_noExit(inerr error, t *testing.T) {
 	}
 }
 
+func CheckError_test(inerr error, t *testing.T)        { CheckErrorEx_panic(inerr) }
+func CheckError_test_noExit(inerr error, t *testing.T) { CheckErrorEx_info(inerr, g_logger) }
+
 // panic recover
 func Panic_Recover(inlog *log.Logger) {
 	if msg := recover(); msg != nil {
-		tmp := make([]byte, 1024*1024)
+		tmp := make([]byte, g_gsErrorStackBufSize)
 		nlen := runtime.Stack(tmp, false)
 		inlog.Output(1,
 			fmt.Sprintf("Panic[Func exit] recover msg: %s\nPanic runtime.Stack: %s\n", msg, string(tmp[:nlen])))
@@ -97,7 +107,7 @@ func Panic_Recover(inlog *log.Logger) {
 
 func Panic_Recover_GSCtx(inlog *log.Logger, gctx GsContext) {
 	if msg := recover(); msg != nil {
-		tmp := make([]byte, 1024*1024)
+		tmp := make([]byte, g_gsErrorStackBufSize)
 		nlen := runtime.Stack(tmp, false)
 		inlog.Output(1,
 			fmt.Sprintf("Panic[Func exit] recover msg: [%d] %s\nPanic runtime.Stack: %s\n", gctx.GetGsId(), msg, string(tmp[:nlen])))

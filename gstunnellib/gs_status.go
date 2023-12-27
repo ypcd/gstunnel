@@ -17,17 +17,17 @@ type GsStatus interface {
 }
 
 type gsStatusImp struct {
-	Gid             GId
+	//Gid             GId
 	StatusConnList1 StatusConnList
 }
 
 type gsStatusData struct {
-	Gid      uint64
+	//Gid      uint64
 	ConnList *statusConnListData
 }
 
-func NewGsStatusImp(ingid GId) GsStatus {
-	return &gsStatusImp{Gid: ingid,
+func NewGsStatusImp() GsStatus {
+	return &gsStatusImp{
 		StatusConnList1: newStatusConnListImp()}
 }
 
@@ -39,7 +39,7 @@ func (s *gsStatusImp) GetJson() []byte {
 }
 
 func (s *gsStatusImp) GetStatusData() *gsStatusData {
-	return &gsStatusData{Gid: s.Gid.GetId(), ConnList: s.GetStatusConnList().getStatusConnListData()}
+	return &gsStatusData{ConnList: s.GetStatusConnList().getStatusConnListData()}
 }
 
 func (s *gsStatusImp) GetStatusConnList() StatusConnList {

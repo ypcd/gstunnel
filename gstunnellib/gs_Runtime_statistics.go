@@ -146,6 +146,15 @@ func (rs *runtime_statistics_imp) GetJson() ([]byte, error) {
 	return re, err
 }
 
+type runtime_statistics_null struct{}
+
+func NewRuntimeStatisticsNULL() Runtime_statistics                     { return &runtime_statistics_null{} }
+func (rs *runtime_statistics_null) AddSrcTotalNetData_recv(inv int)    {}
+func (rs *runtime_statistics_null) AddSrcTotalNetData_send(inv int)    {}
+func (rs *runtime_statistics_null) AddServerTotalNetData_recv(inv int) {}
+func (rs *runtime_statistics_null) AddServerTotalNetData_send(inv int) {}
+func (rs *runtime_statistics_null) GetJson() ([]byte, error)           { return nil, nil }
+
 func RunGRuntimeStatistics_print(inlog *log.Logger, inruntstats Runtime_statistics) {
 	for {
 		time.Sleep(time.Second * 10)

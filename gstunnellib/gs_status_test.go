@@ -6,8 +6,10 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 )
 
+/*
 func Test_gsstatus1(t *testing.T) {
 	gid := NewGIdImp()
 	s1 := NewGsStatusImp(gid)
@@ -20,6 +22,7 @@ func Test_gsstatus1(t *testing.T) {
 		}
 	}
 }
+*/
 
 func getnetconn() (net.Conn, net.Conn) {
 	var conna, connc net.Conn
@@ -37,7 +40,7 @@ func getnetconn() (net.Conn, net.Conn) {
 		conna, err = lst.Accept()
 		CheckError_exit(err)
 	}()
-	//	time.Sleep(1 * time.Second)
+	time.Sleep(time.Millisecond * 100)
 	connc, err := net.Dial("tcp4", "127.0.0.1:12345")
 	CheckError_exit(err)
 	wg.Wait()
@@ -71,8 +74,8 @@ func Test_statusConnListImp(t *testing.T) {
 }
 
 func Test_GetStatusConnList(t *testing.T) {
-	g1 := NewGIdImp()
-	v1 := NewGsStatusImp(g1)
+	//g1 := NewGIdImp()
+	v1 := NewGsStatusImp()
 	cl := v1.GetStatusConnList()
 
 	connList1, ok := cl.(*statusConnListImp)
@@ -92,8 +95,8 @@ func Test_GetStatusConnList(t *testing.T) {
 }
 
 func Test_GetStatusImp2(t *testing.T) {
-	g1 := NewGIdImp()
-	v1 := NewGsStatusImp(g1)
+	//g1 := NewGIdImp()
+	v1 := NewGsStatusImp()
 	//cl := v1.GetStatusConnList()
 	j1, err := json.Marshal(v1)
 	CheckError_exit(err)
@@ -120,8 +123,8 @@ func Test_GetStatusImp2(t *testing.T) {
 }
 
 func Test_GetStatusImp3(t *testing.T) {
-	g1 := NewGIdImp()
-	v1 := NewGsStatusImp(g1)
+	//g1 := NewGIdImp()
+	v1 := NewGsStatusImp()
 	//cl := v1.GetStatusConnList()
 
 	conn1, conn2 := getnetconn()
@@ -159,8 +162,8 @@ func Test_GetStatusConnListData(t *testing.T) {
 }
 
 func Test_gsstatus2(t *testing.T) {
-	gid := NewGIdImp()
-	s1 := NewGsStatusImp(gid)
+	//gid := NewGIdImp()
+	s1 := NewGsStatusImp()
 	connList1 := s1.GetStatusConnList()
 	conn1, conn2 := getnetconn()
 	fmt.Println(conn1, conn2)
@@ -172,8 +175,8 @@ func Test_gsstatus2(t *testing.T) {
 }
 
 func Test_gsstatus3(t *testing.T) {
-	gid := NewGIdImp()
-	s1 := NewGsStatusImp(gid)
+	//gid := NewGIdImp()
+	s1 := NewGsStatusImp()
 	connList1 := s1.GetStatusConnList()
 	conn1, conn2 := getnetconn()
 	fmt.Println(conn1, conn2)

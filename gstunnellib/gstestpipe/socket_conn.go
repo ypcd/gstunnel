@@ -41,6 +41,6 @@ func newSocketConn(server string) *pipe_conn {
 }
 
 func GetRandAddr() string {
-	port := 1024 + gsrand.GetRDCInt_max(49151-1024)
+	port := 10000 + gsrand.GetRDCInt_max(49151-10000)
 	return "127.0.0.1:" + strconv.Itoa(int(port))
 }

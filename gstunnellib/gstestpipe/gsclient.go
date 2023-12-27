@@ -1,7 +1,6 @@
 package gstestpipe
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"net"
@@ -70,7 +69,7 @@ func gstPipoHandle(key string, conn net.Conn) {
 			if gsbase.G_Deep_debug {
 				g_logger.Println("gsclient packing data hash:", gshash.GetSha256Hex(wbuf))
 			}
-			rn, err := io.Copy(conn, bytes.NewBuffer(wbuf))
+			rn, err := gstunnellib.NetConnWriteAll(conn, wbuf)
 			writeSize += rn
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) ||
 				errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
@@ -112,7 +111,7 @@ func gstPipoHandleEx(obj *gstEchoHandlerObj, key string, conn net.Conn) {
 			if gsbase.G_Deep_debug {
 				g_logger.Println("gsclient packing data hash:", gshash.GetSha256Hex(wbuf))
 			}
-			rn, err := io.Copy(conn, bytes.NewBuffer(wbuf))
+			rn, err := gstunnellib.NetConnWriteAll(conn, wbuf)
 			obj.writeSize += rn
 			if errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) ||
 				errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"os"
 	"testing"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib/gshash"
@@ -129,6 +130,42 @@ func Test_gspacknet_WriteEncryData_GetDecryData1_5(t *testing.T) {
 	CheckError_panic(err)
 	if !bytes.Equal(rawdataList, data) {
 		t.Fatal("error.")
+	}
+}
+
+func Test_gspacknet_WriteEncryData_GetDecryData2(t *testing.T) {
+	pn := NewGsPackNet(g_key_Default)
+
+	for i := 0; i < 10000*1; i++ {
+		//fmt.Println("Hash:", gshash.GetSha256Hex(encrydata))
+		rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(65535 - 10000)))
+		encrydata := pn.Packing(rawdata)
+		pn.WriteEncryData(encrydata)
+		data, err := pn.GetDecryData()
+		CheckError_test(err, t)
+		if !bytes.Equal(rawdata, data) {
+			t.Fatal("error.")
+		}
+	}
+}
+
+func nouse_Test_gspacknet_WriteEncryData_GetDecryData2_2(t *testing.T) {
+	pn := NewGsPackNet(g_key_Default)
+	fd, err := os.Create("in.data")
+	CheckErrorEx_panic(err)
+	defer fd.Close()
+
+	for i := 0; i < 10000*1; i++ {
+		//fmt.Println("Hash:", gshash.GetSha256Hex(encrydata))
+		rawdata := gsrand.GetRDBytes(int(gsrand.GetRDCInt_max(65535 - 10000)))
+		encrydata := pn.Packing(rawdata)
+		fd.Write([]byte(fmt.Sprintf("%d\n", len(encrydata))))
+		pn.WriteEncryData(encrydata)
+		data, err := pn.GetDecryData()
+		CheckError_test(err, t)
+		if !bytes.Equal(rawdata, data) {
+			t.Fatal("error.")
+		}
 	}
 }
 

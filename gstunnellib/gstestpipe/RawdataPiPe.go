@@ -47,10 +47,10 @@ func (ss *rawdataPiPePiPo) GetClientConn() net.Conn {
 	ss.connList = newPipeConn()
 
 	go func(pp *pipe_conn) {
-		for {
-			_, err := io.Copy(pp.server, pp.server)
-			checkError_exit(err)
-		}
+
+		_, err := io.Copy(pp.server, pp.server)
+		checkError_exit(err)
+
 	}(ss.connList)
 
 	return ss.connList.client
