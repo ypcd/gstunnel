@@ -1,0 +1,22 @@
+syntax = "proto3";
+package gspackoper;
+
+
+option go_package="./;gspackoper";
+
+/*
+type packOper struct {
+	OperType uint8
+	OperData []byte
+	Data     []byte
+	Rand     []byte
+	HashHex  []byte
+}
+*/
+message packOper_pro {
+	uint32     OperType =1;
+	bytes OperData =2;
+	bytes Data     =3;
+	bytes Rand     =4;
+	bytes HashHex  =5;
+}
