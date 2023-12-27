@@ -68,13 +68,13 @@ func test_server_socket_echo_handler(obj *testSocketEchoHandlerObj, server net.C
 
 	}(server)
 
-	_, err := io.Copy(server, bytes.NewBuffer(SendData))
-	checkError(err)
+	//_, err := gstunnellib.NetConnWriteAll(server, SendData)
+	_, err := gstunnellib.NetConnWriteAll(server, SendData)
 
+	checkError(err)
 	//time.Sleep(time.Second * 6)
 	wg.Wait()
 	server.Close()
-
 	//time.Sleep(time.Second * 60)
 
 	if !bytes.Equal(SendData, rbuf) {
@@ -85,13 +85,16 @@ func test_server_socket_echo_handler(obj *testSocketEchoHandlerObj, server net.C
 	//logger_test.Println("[pipe run time(sec)]:", t2.Sub(t1).Seconds())
 	//logger_test.Println("[pipe run MiB/sec]:", float64(testCacheSizeMiB)/(t2.Sub(t1).Seconds()))
 
-	//time.Sleep(time.Second * 60)
+	//time.Sleep(time.Hour * 60)
 }
 
-func inTest_server_socket(t *testing.T, mt_mode bool) {
-	count_inTest_server_NetPipe++
+func inTest_server_socket(t *testing.T, mt_mode bool, mbNum int) {
+	g_count_inTest_server_NetPipe++
+
+	var t1, t2 time.Time
 
 	logger_test.Println("[inTest_server_NetPipe] start.")
+	t1 = time.Now()
 	raws := gstestpipe.NewRawServerSocket_RandAddr()
 	defer raws.Close()
 	raws.Run()
@@ -105,23 +108,28 @@ func inTest_server_socket(t *testing.T, mt_mode bool) {
 
 	handleobj := testSocketEchoHandlerObj{
 		testReadTimeOut:  time.Second * 1,
-		testCacheSize:    200 * 1024 * 1024,
-		testCacheSizeMiB: 200}
+		testCacheSize:    mbNum * 1024 * 1024,
+		testCacheSizeMiB: mbNum}
 	//g_networkTimeout = handleobj.testReadTimeOut
 
-	go run_pipe_test_listen(listenAddr, raws.GetServerAddr())
+	gstServerT := newGstServer(listenAddr, raws.GetServerAddr())
+	defer gstServerT.close()
+	go gstServerT.run()
 
 	time.Sleep(time.Millisecond * 10)
 	gsc.Run()
 
 	server := <-raws.GetConnList()
 	test_server_socket_echo_handler(&handleobj, server)
+	t2 = time.Now()
+	logger_test.Println("[pipe run time(sec)]:", t2.Sub(t1).Seconds())
+	logger_test.Println("[pipe run MiB/sec]:", float64(handleobj.testCacheSizeMiB)/(t2.Sub(t1).Seconds()))
 }
 
-func inTest_server_socket_mt(t *testing.T, mt_mode bool) {
-	count_inTest_server_NetPipe++
+func inTest_server_socket_mt(t *testing.T, mt_mode bool, connes int) {
+	g_count_inTest_server_NetPipe++
 
-	mtNum := 300
+	mtNum := connes
 
 	time_run_begin := time.Now()
 	logger_test.Println("[inTest_server_socket_mt] start.")
@@ -145,7 +153,9 @@ func inTest_server_socket_mt(t *testing.T, mt_mode bool) {
 		wg:               &wg}
 	g_networkTimeout = handleobj.testReadTimeOut
 
-	go run_pipe_test_listen(listenAddr, raws.GetServerAddr())
+	gstServerT := newGstServer(listenAddr, raws.GetServerAddr())
+	defer gstServerT.close()
+	go gstServerT.run()
 
 	time.Sleep(time.Millisecond * 10)
 	time_connSocket_begin := time.Now()
@@ -167,10 +177,10 @@ func inTest_server_socket_mt(t *testing.T, mt_mode bool) {
 	logger_test.Println("time_run:", time_run_end.Sub(time_run_begin))
 }
 
-func inTest_server_socket_mt_old(t *testing.T, mt_mode bool) {
-	count_inTest_server_NetPipe++
+func inTest_server_socket_mt_old_listen(t *testing.T, mt_mode bool, connes int) {
+	g_count_inTest_server_NetPipe++
 
-	mtNum := 300
+	mtNum := connes
 
 	time_run_begin := time.Now()
 	logger_test.Println("[inTest_server_socket_mt_old] start.")

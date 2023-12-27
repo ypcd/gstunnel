@@ -24,7 +24,7 @@ var g_Values = gstunnellib.NewGlobalValuesImp()
 //var p = gstunnellib.Nullprint
 //var pf = gstunnellib.Nullprintf
 
-var g_fpnull = os.DevNull
+//var g_fpnull = os.DevNull
 
 var g_key string
 
@@ -61,7 +61,7 @@ var g_init_status = false
 
 var g_gid = gstunnellib.NewGIdImp()
 
-var g_gstst = gstunnellib.NewGsStatusImp(g_gid)
+var g_gstst = gstunnellib.NewGsStatusImp()
 
 const g_connHandleGoNum = 16
 
@@ -93,7 +93,7 @@ func init_server_run() {
 		os.Exit(1)
 	}
 
-	g_RuntimeStatistics = gstunnellib.NewRuntimeStatistics()
+	g_RuntimeStatistics = gstunnellib.NewRuntimeStatisticsNULL()
 
 	g_log_List.GenLogger = gstunnellib.NewLoggerFileAndStdOut("gstunnel_server.log")
 	g_log_List.GSIpLogger = gstunnellib.NewLoggerFileAndStdOut("access.log")
@@ -119,6 +119,8 @@ func init_server_run() {
 	g_key = g_gsconfig.Key
 
 	g_Logger.Println("debug:", g_Values.GetDebug())
+
+	g_Logger.Println("Aes key len:", gsbase.G_AesKeyLen)
 
 	g_Logger.Println("g_Mt_model:", g_Mt_model)
 	g_Logger.Println("g_tmr_display_time:", g_tmr_display_time)
@@ -151,7 +153,7 @@ func init_server_test() {
 		g_init_status = true
 	}
 
-	g_RuntimeStatistics = gstunnellib.NewRuntimeStatistics()
+	g_RuntimeStatistics = gstunnellib.NewRuntimeStatisticsNULL()
 
 	g_log_List.GenLogger = gstunnellib.NewLoggerFileAndStdOut("gstunnel_server.log")
 	g_log_List.GSIpLogger = gstunnellib.NewLoggerFileAndStdOut("access.log")

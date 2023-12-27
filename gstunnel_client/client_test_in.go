@@ -51,8 +51,8 @@ func forceGC() {
 
 func inTest_client_NetPipe(t *testing.T, mt_mode bool) {
 	logger_test.Println("[inTest_client_NetPipe] start.")
-	sc := gstestpipe.NewSrcClientNone()
-	gss := gstestpipe.NewGstPiPoDefaultKey()
+	rawClient := gstestpipe.NewSrcClientNone()
+	gstServer := gstestpipe.NewGstPiPoDefaultKey()
 
 	g_Mt_model = mt_mode
 	g_Values.SetDebug(true)
@@ -62,11 +62,11 @@ func inTest_client_NetPipe(t *testing.T, mt_mode bool) {
 
 	wg_run := new(sync.WaitGroup)
 
-	run_pipe_test_wg(sc, gss, wg_run)
+	run_pipe_test_wg_old(rawClient, gstServer, wg_run)
 
 	wg := sync.WaitGroup{}
 
-	server := sc.GetClientConn()
+	server := rawClient.GetClientConn()
 
 	SendData := GetRDBytes_local(testCacheSize)
 	//SendData := []byte("123456")
@@ -102,7 +102,7 @@ func inTest_client_NetPipe(t *testing.T, mt_mode bool) {
 
 	}(server)
 
-	_, err := io.Copy(server, bytes.NewBuffer(SendData))
+	_, err := gstunnellib.NetConnWriteAll(server, SendData)
 	checkError(err)
 	forceGC()
 	//time.Sleep(time.Second * 6)
@@ -133,19 +133,19 @@ func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 	defer gwg.Done()
 
 	logger_test.Println("[inTest_client_NetPipe] start.")
-	sc := gstestpipe.NewServiceServerNone()
-	gss := gstestpipe.NewGstPiPoDefaultKey()
+	rawClient := gstestpipe.NewServiceServerNone()
+	gstServer := gstestpipe.NewGstPiPoDefaultKey()
 
 	testReadTimeOut := time.Second * 3
 	testCacheSize := 100 * 1024 * 1024
 
 	wg_run := new(sync.WaitGroup)
 
-	run_pipe_test_wg(sc, gss, wg_run)
+	run_pipe_test_wg_old(rawClient, gstServer, wg_run)
 
 	wg := sync.WaitGroup{}
 
-	server := sc.GetClientConn()
+	server := rawClient.GetClientConn()
 
 	SendData := GetRDBytes_local(testCacheSize)
 	//SendData := []byte("123456")
@@ -180,7 +180,7 @@ func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 
 	}(server)
 
-	_, err := io.Copy(server, bytes.NewBuffer(SendData))
+	_, err := gstunnellib.NetConnWriteAll(server, SendData)
 	checkError(err)
 	forceGC()
 	//time.Sleep(time.Second * 6)
@@ -202,8 +202,8 @@ func inTest_client_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 
 func inTest_client_timeout(t *testing.T, mt_mode bool) {
 	logger_test.Println("[inTest_client_NetPipe] start.")
-	sc := gstestpipe.NewSrcClientNone()
-	gss := gstestpipe.NewGstPiPoDefaultKey()
+	rawClient := gstestpipe.NewSrcClientNone()
+	gstServer := gstestpipe.NewGstPiPoDefaultKey()
 
 	old_networkTimeout := g_networkTimeout
 	g_networkTimeout = time.Second * 1
@@ -218,7 +218,7 @@ func inTest_client_timeout(t *testing.T, mt_mode bool) {
 
 	wg_run := new(sync.WaitGroup)
 
-	run_pipe_test_wg(sc, gss, wg_run)
+	run_pipe_test_wg_old(rawClient, gstServer, wg_run)
 
 	time.Sleep(time.Second * 2)
 	logger_test.Println("Func done.")

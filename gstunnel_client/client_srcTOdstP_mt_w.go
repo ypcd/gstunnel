@@ -1,21 +1,22 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"net"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/ypcd/gstunnel/v6/gstunnellib"
+	"github.com/ypcd/gstunnel/v6/gstunnellib/gsobj"
 	"github.com/ypcd/gstunnel/v6/timerm"
 )
 
-func srcTOdstP_w(dst net.Conn, dst_chan chan []byte, dst_ok gstunnellib.Gorou_status, wlentotal int64, wg_w *sync.WaitGroup, gctx gstunnellib.GsContext) {
-	defer wg_w.Done()
-	defer gstunnellib.Panic_Recover_GSCtx(g_Logger, gctx)
+func srcTOdstP_w(obj *gsobj.GstObjW) {
+	defer obj.Wg_w.Done()
+	defer obj.Gctx.Close()
+	defer gstunnellib.Panic_Recover_GSCtx(g_Logger, obj.Gctx)
+	defer obj.Close()
 
 	//tmr_out := timerm.CreateTimer(g_networkTimeout)
 	tmrP2 := timerm.CreateTimer(g_tmr_display_time)
@@ -24,23 +25,18 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan []byte, dst_ok gstunnellib.Gorou_st
 	var timew1 time.Time
 	//recot_p_w := timerm.CreateRecoTime()
 
-	fp1 := "CPrecv.data"
-	fp2 := "CPsend.data"
-
-	fp1, fp2 = g_fpnull, g_fpnull
-	_, _ = fp1, fp2
+	//fp1, fp2 := g_fpnull, g_fpnull
+	//_, _ = fp1, fp2
 
 	var err error
 	_ = err
 
-	defer dst.Close()
-
-	var wlent int64 = wlentotal
+	//	var obj.Wlent int64 = wlentotal
 
 	defer func() {
-		g_RuntimeStatistics.AddServerTotalNetData_send(int(wlent))
+		g_RuntimeStatistics.AddServerTotalNetData_send(int(obj.Wlent))
 		g_log_List.GSNetIOLen.Printf("[%d] gorou exit.\n\t%s\tpack  twlen:%d\n\t%s",
-			gctx.GetGsId(), gstunnellib.GetNetConnAddrString("dst", dst), wlent,
+			obj.Gctx.GetGsId(), gstunnellib.GetNetConnAddrString("obj.Dst", obj.Dst), obj.Wlent,
 			nt_write.PrintString(),
 		)
 
@@ -51,47 +47,44 @@ func srcTOdstP_w(dst net.Conn, dst_chan chan []byte, dst_ok gstunnellib.Gorou_st
 		}
 	}()
 
-	defer func() {
-		dst_ok.SetClose()
-		gstunnellib.ChanClean(dst_chan)
-	}()
+	var ok bool
 
 	for {
 
-		buf, ok := <-dst_chan
+		obj.Wbuf, ok = <-obj.Dst_chan
 		if !ok {
-			g_Logger.Printf("Info: [%d] dst_chan is not ok, func exit.\n", gctx.GetGsId())
+			g_Logger.Printf("Info: [%d] obj.Dst_chan is not ok, func exit.\n", obj.Gctx.GetGsId())
 			return
 		}
-		if len(buf) <= 0 {
+		if len(obj.Wbuf) <= 0 {
 			continue
 		}
 
-		if len(buf) > 0 {
-			dst.SetWriteDeadline(time.Now().Add(g_networkTimeout))
+		if len(obj.Wbuf) > 0 {
+			obj.Dst.SetWriteDeadline(time.Now().Add(g_networkTimeout))
 			timew1 = time.Now()
-			wlen, err := io.Copy(dst, bytes.NewBuffer(buf))
-			wlent += int64(wlen)
+			wlen, err := gstunnellib.NetConnWriteAll(obj.Dst, obj.Wbuf)
+			obj.Wlent += int64(wlen)
 			if errors.Is(err, net.ErrClosed) || errors.Is(err, io.EOF) ||
 				errors.Is(err, io.ErrClosedPipe) || errors.Is(err, os.ErrDeadlineExceeded) {
-				checkError_info_GsCtx(err, gctx)
+				checkError_info_GsCtx(err, obj.Gctx)
 				return
 			} else {
-				checkError_panic_GsCtx(err, gctx)
+				checkError_panic_GsCtx(err, obj.Gctx)
 			}
 			nt_write.Add(time.Since(timew1))
 			//tmr_out.Boot()
 		}
 
 		if tmrP2.Run() && g_Values.GetDebug() {
-			g_Logger.Printf("pack twlen:%d\n", wlent)
+			g_Logger.Printf("pack twlen:%d\n", obj.Wlent)
 			//g_Logger.Println("g_goPackTotal:", g_goPackTotal)
 
 			//g_Logger.Println("RecoTime_p_w All: ", recot_p_w.StringAll())
 		}
 		/*
 			if tmr_out.Run() {
-				g_Logger.Printf("Error: [%d] Time out, func exit.\n", gctx.GetGsId())
+				g_Logger.Printf("Error: [%d] Time out, func exit.\n", obj.Gctx.GetGsId())
 				return
 			}
 		*/

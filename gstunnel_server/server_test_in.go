@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	randc "crypto/rand"
 	"errors"
 	"io"
 	"log"
@@ -20,7 +19,7 @@ import (
 )
 
 var logger_test *log.Logger
-var count_inTest_server_NetPipe int = 0
+var g_count_inTest_server_NetPipe int = 0
 
 func Test_func1(t *testing.T) {
 	logger_test.Println("ok.")
@@ -38,12 +37,7 @@ func Test_func1(t *testing.T) {
 }
 
 func GetRDBytes_local(byteLen int) []byte {
-	data := make([]byte, byteLen)
-	_, err := randc.Reader.Read(data)
-	if err != nil {
-		panic(err)
-	}
-	return data
+	return gsrand.GetRDBytes(byteLen)
 }
 
 func forceGC() {
@@ -53,7 +47,7 @@ func forceGC() {
 }
 
 func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
-	count_inTest_server_NetPipe++
+	g_count_inTest_server_NetPipe++
 
 	logger_test.Println("[inTest_server_NetPipe] start.")
 	ss := gstestpipe.NewServiceServerNone()
@@ -63,8 +57,8 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 	g_Values.SetDebug(true)
 
 	testReadTimeOut := time.Second * 1
-	testCacheSize := 200 * 1024 * 1024
-	testCacheSizeMiB := testCacheSize / 1024 / 1024
+	testCacheSizeMiB := 200
+	testCacheSize := testCacheSizeMiB * 1024 * 1024
 
 	wg_run := new(sync.WaitGroup)
 
@@ -108,7 +102,7 @@ func inTest_server_NetPipe(t *testing.T, mt_mode bool) {
 
 	}(server)
 
-	_, err := io.Copy(server, bytes.NewBuffer(SendData))
+	_, err := gstunnellib.NetConnWriteAll(server, SendData)
 	checkError(err)
 	forceGC()
 	//time.Sleep(time.Second * 6)
@@ -157,7 +151,7 @@ func inTest_server_NetPipe_errorData(t *testing.T, mt_mode bool) {
 	logger_test.Println("inTest_server_NetPipe data transfer start.")
 
 	///////////////////////////////////////////////////////////////////////////
-	_, err := io.Copy(gsc.GetClientConn(), bytes.NewBuffer(SendData))
+	_, err := gstunnellib.NetConnWriteAll(gsc.GetClientConn(), SendData)
 	checkError_NoExit(err)
 
 	//////////////////////////////////////////////////////////////////////////
@@ -194,7 +188,7 @@ func inTest_server_NetPipe_errorKey(t *testing.T, mt_mode bool) {
 	///////////////////////////////////////////////////////////////////////////
 	pack1 := gstunnellib.NewGsPackNet(key_error)
 	pdata := pack1.Packing(gsrand.GetRDBytes(50 * 1024))
-	_, err := io.Copy(gsc.GetClientConn(), bytes.NewBuffer(pdata))
+	_, err := gstunnellib.NetConnWriteAll(gsc.GetClientConn(), pdata)
 	checkError_panic(err)
 
 	wg.Wait()
@@ -255,7 +249,7 @@ func inTest_server_NetPipe_go(t *testing.T, gwg *sync.WaitGroup) {
 
 	}(server)
 
-	_, err := io.Copy(server, bytes.NewBuffer(SendData))
+	_, err := gstunnellib.NetConnWriteAll(server, SendData)
 	checkError(err)
 	forceGC()
 	//time.Sleep(time.Second * 6)

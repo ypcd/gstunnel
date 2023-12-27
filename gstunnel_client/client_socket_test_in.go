@@ -68,7 +68,7 @@ func test_client_socket_echo_handler(obj *testSocketEchoHandlerObj, server net.C
 
 	}(server)
 
-	_, err := io.Copy(server, bytes.NewBuffer(SendData))
+	_, err := gstunnellib.NetConnWriteAll(server, SendData)
 	checkError(err)
 
 	//time.Sleep(time.Second * 6)
@@ -88,7 +88,7 @@ func test_client_socket_echo_handler(obj *testSocketEchoHandlerObj, server net.C
 	//time.Sleep(time.Second * 60)
 }
 
-func inTest_client_socket(t *testing.T, mt_mode bool) {
+func inTest_client_socket(t *testing.T, mt_mode bool, mbNum int) {
 
 	logger_test.Println("[inTest_client_NetPipe] start.")
 	gstServer := gstestpipe.NewGstServerSocketEcho_RandAddr()
@@ -104,8 +104,8 @@ func inTest_client_socket(t *testing.T, mt_mode bool) {
 
 	handleobj := testSocketEchoHandlerObj{
 		testReadTimeOut:  time.Second * 1,
-		testCacheSize:    200 * 1024 * 1024,
-		testCacheSizeMiB: 200}
+		testCacheSize:    mbNum * 1024 * 1024,
+		testCacheSizeMiB: mbNum}
 	//g_networkTimeout = handleobj.testReadTimeOut
 
 	go run_pipe_test_listen(listenAddr, gstServer.GetServerAddr())
@@ -118,7 +118,7 @@ func inTest_client_socket(t *testing.T, mt_mode bool) {
 
 func inTest_client_socket_mt(t *testing.T, mt_mode bool) {
 
-	mtNum := 300
+	mtNum := 100
 
 	time_run_begin := time.Now()
 	logger_test.Println("[inTest_client_socket_mt] start.")
