@@ -1,0 +1,1 @@
+go test -timeout 0 -run "^Test_server_NetPipe_st$|^Test_server_NetPipe_mt$"
