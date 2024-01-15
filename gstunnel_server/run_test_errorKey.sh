@@ -1,0 +1,10 @@
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
+go test -run ^Test_server_NetPipe_errorKey$ >> errorKey.txt
