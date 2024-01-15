@@ -1,6 +1,6 @@
 package gsbase
 
-const G_Version string = "V6.2.31.0"
+const G_Version string = "V6.3.0.0"
 
 const G_Deep_debug bool = false
 const G_RunTime_Debug bool = false
